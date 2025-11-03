@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Timeline Parser</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 20px;
+        color: #222;
+      }
+      textarea {
+        width: 100%;
+        height: 160px;
+        font-family: monospace;
+        margin-bottom: 10px;
+      }
+      .controls {
+        margin-bottom: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button,
+      input[type="file"] {
+        padding: 6px 10px;
+      }
+      .timeline-wrap {
+        margin-top: 12px;
+        border: 1px solid #ddd;
+        padding: 12px;
+        border-radius: 6px;
+      }
+      .timeline {
+        position: relative;
+        min-height: 48px;
+        height: 48px; /* will be overridden inline quando necessário */
+        background: linear-gradient(90deg, #f8f8f8, #fff);
+        border-radius: 6px;
+        box-shadow: inset 0 -1px 0 #eaeaea;
+        margin-bottom: 12px;
+      }
+      .marker {
+        position: absolute;
+        width: 2px;
+        transform: translateX(-50%);
+        cursor: default;
+      }
+      /* color styles by type */
+      .marker.type-start {
+        background: #28a745;
+      } /* green */
+      .marker.type-end {
+        background: #d9534f;
+      } /* red */
+      .marker.type-alert {
+        background: #ff9800;
+      } /* orange */
+      .marker .dot {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        top: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+      }
+      .marker.type-start .dot {
+        background: #28a745;
+        box-shadow: 0 0 6px rgba(40, 167, 69, 0.25);
+      }
+      .marker.type-end .dot {
+        background: #d9534f;
+        box-shadow: 0 0 6px rgba(217, 83, 79, 0.25);
+      }
+      .marker.type-alert .dot {
+        background: #ff9800;
+        box-shadow: 0 0 6px rgba(255, 152, 0, 0.25);
+      }
+
+      .tooltip {
+        position: absolute;
+        background: #222;
+        color: #fff;
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        transform: translate(-50%, -140%);
+        display: none;
+        pointer-events: none;
+        z-index: 1000;
+      }
+      .marker:hover .tooltip {
+        display: block;
+      }
+      .events {
+        max-height: 320px;
+        overflow: auto;
+        border-top: 1px dashed #eee;
+        padding-top: 8px;
+        display: grid;
+        gap: 12px;
+      }
+      .section {
+        border-radius: 4px;
+        padding: 6px;
+        background: #fafafa;
+        border: 1px solid #f0f0f0;
+      }
+      .section-head {
+        font-weight: 700;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .badge {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+      .badge.start {
+        background: #28a745;
+      }
+      .badge.end {
+        background: #d9534f;
+      }
+      .badge.alert {
+        background: #ff9800;
+      }
+
+      .event-row {
+        padding: 6px 4px;
+        border-bottom: 1px solid #fafafa;
+        font-size: 14px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .time {
+        color: #666;
+        width: 110px;
+        font-family: monospace;
+      }
+      .label {
+        flex: 1;
+      }
+      .small {
+        font-size: 13px;
+        color: #666;
+      }
+      .export {
+        margin-left: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Parser de timeline</h2>
+    <p class="small">
+      Cole o texto de entrada abaixo (ou carregue um arquivo .txt). O parser
+      encontra timestamps (números) em cada item, normaliza para 0..final e
+      desenha a timeline. Eventos são classificados por tipo:
+      <span class="badge start"></span> _start (verde),
+      <span class="badge end"></span> _end (vermelho),
+      <span class="badge alert"></span> outros (laranja).
+    </p>
+
+    <textarea id="inputText">
+observation: 40.84085, stick_start observation: 40.84085, Examining throat with a stick before hygiene observation: 40.84085, Examining throat with a stick before anamnesis observation: 42.45923, stick_end observation: 45.94617, steto_start observation: 45.94617, Using stethoscope before hygiene observation: 45.94617, Using stethoscope before anamnesis observation: 46.91853, steto_end observation: 49.29418, stick_start observation: 49.29418, Examining throat with a stick before hygiene observation: 49.29418, Examining throat with a stick before anamnesis observation: 49.54818, stick_end observation: 53.16912, otoscope_start observation: 53.16912, Using otoscope before hygiene observation: 53.16912, Using otoscope before anamnesis observation: 53.75177, otoscope_end observation: 59.76503, audioClip observation: 64.5723, otoscope_start observation: 64.5723, Using otoscope before hygiene observation: 64.78034, otoscope_end observation: 68.27122, steto_start observation: 68.27122, Using stethoscope before hygiene observation: 68.50159, steto_end observation: 73.71736, glovesScript_start observation: 75.23737, glovesScript_end observation: 80.33521, steto_start observation: 81.3203, steto_end observation: 89.03033, otoscope_start observation: 100.4051, otoscope_end observation: 105.3222, correctDiagnosis observation: 105.3222, selectedDiagnosis observation: 105.3222, correctTreatment</textarea
+    >
+
+    <div class="controls">
+      <button id="parseBtn">Parsear e gerar timeline</button>
+      <input type="file" id="fileInput" accept=".txt" />
+      <button id="exportJson">Exportar JSON</button>
+      <button id="exportCsv">Exportar CSV</button>
+      <div class="small" id="summary"></div>
+    </div>
+
+    <div class="timeline-wrap" id="output" style="display: none">
+      <div class="timeline" id="timelineBar"></div>
+      <div class="events" id="eventsList"></div>
+    </div>
+
+    <script>
+      (function () {
+        const input = document.getElementById("inputText");
+        const parseBtn = document.getElementById("parseBtn");
+        const fileInput = document.getElementById("fileInput");
+        const timelineWrap = document.getElementById("output");
+        const timelineBar = document.getElementById("timelineBar");
+        const eventsList = document.getElementById("eventsList");
+        const summary = document.getElementById("summary");
+        const exportJson = document.getElementById("exportJson");
+        const exportCsv = document.getElementById("exportCsv");
+
+        function parseText(text) {
+          // split by newlines OR commas — many inputs use commas
+          const tokens = text
+            .split(/\r?\n|,/)
+            .map((t) => t.trim())
+            .filter(Boolean);
+          const events = [];
+          const numberRE = /([0-9]+(?:\.[0-9]+)?)/;
+          tokens.forEach((tok) => {
+            // try to find the first number in token
+            const m = tok.match(numberRE);
+            if (!m) return;
+            const time = parseFloat(m[1]);
+            // build a label by removing the number and common prefixes like "observation:"
+            let label = tok
+              .replace(numberRE, "")
+              .replace(/observation:/gi, "")
+              .trim();
+            // remove duplicate extra punctuation and leading/trailing separators
+            label = label.replace(/^[\s:,-]+|[\s:,-]+$/g, "").trim();
+            if (!label) label = "event";
+
+            // determine type by suffix
+            const lower = label.toLowerCase();
+            let type = "alert";
+            if (/_start$/i.test(lower)) type = "start";
+            else if (/_end$/i.test(lower)) type = "end";
+
+            events.push({ original: time, label, type });
+          });
+          if (events.length === 0) return [];
+          // sort by original time
+          events.sort((a, b) => a.original - b.original);
+          const minT = events[0].original;
+          const maxT = events[events.length - 1].original;
+          const duration = Math.max(0, maxT - minT);
+          // annotate normalized time and percent
+          events.forEach((ev) => {
+            ev.normalized = +(ev.original - minT).toFixed(6);
+            ev.percent = duration === 0 ? 0 : (ev.normalized / duration) * 100;
+          });
+          return { events, minT, maxT, duration };
+        }
+
+        function render(parsed) {
+          if (!parsed || parsed.events.length === 0) {
+            timelineWrap.style.display = "none";
+            summary.textContent = "Nenhum evento encontrado.";
+            return;
+          }
+          timelineWrap.style.display = "block";
+          timelineBar.innerHTML = "";
+          eventsList.innerHTML = "";
+
+          // compute stacking counts for same-percent events (avoid float issues by rounding)
+          const countMap = {};
+          parsed.events.forEach((ev) => {
+            const key = ev.percent.toFixed(3);
+            countMap[key] = (countMap[key] || 0) + 1;
+          });
+          const maxStack = Math.max(1, ...Object.values(countMap));
+          // increase timeline height to fit stacks
+          const baseHeight = 48;
+          const extraPerStack = 10; // px per stacked marker
+          const desiredHeight = baseHeight + (maxStack - 1) * extraPerStack;
+          timelineBar.style.height = desiredHeight + "px";
+
+          // create sections for types
+          const startSection = document.createElement("div");
+          startSection.className = "section";
+          startSection.innerHTML =
+            '<div class="section-head"><span class="badge start"></span> Inícios (_start)</div>';
+          const endSection = document.createElement("div");
+          endSection.className = "section";
+          endSection.innerHTML =
+            '<div class="section-head"><span class="badge end"></span> Fins (_end)</div>';
+          const alertSection = document.createElement("div");
+          alertSection.className = "section";
+          alertSection.innerHTML =
+            '<div class="section-head"><span class="badge alert"></span> Alertas / outros</div>';
+
+          const startList = document.createElement("div");
+          const endList = document.createElement("div");
+          const alertList = document.createElement("div");
+
+          // counters to assign stacking index per percent key
+          const assigned = {};
+
+          parsed.events.forEach((ev) => {
+            // stacking index for same position
+            const key = ev.percent.toFixed(3);
+            const idx = assigned[key] || 0;
+            assigned[key] = idx + 1;
+
+            // marker on timeline
+            const marker = document.createElement("div");
+            marker.className = "marker type-" + ev.type;
+            marker.style.left = ev.percent + "%";
+
+            // stagger vertically to avoid overlap
+            const topBase = 6; // original top
+            const stackOffset = 10; // px per stacked item
+            const topPx = topBase + idx * stackOffset;
+            marker.style.top = topPx + "px";
+
+            // reduce height slightly for deeper stacks to keep markers inside bar
+            const defaultHeight = 36;
+            const reducedHeight = Math.max(14, defaultHeight - idx * 4);
+            marker.style.height = reducedHeight + "px";
+
+            // dot + tooltip
+            // dot + tooltip
+            const dot = document.createElement("div");
+            dot.className = "dot";
+            marker.appendChild(dot);
+            const tip = document.createElement("div");
+            tip.className = "tooltip";
+            tip.textContent =
+              ev.label +
+              " — " +
+              ev.normalized.toFixed(3) +
+              " s (orig: " +
+              ev.original.toFixed(3) +
+              " s) • type: " +
+              ev.type;
+            marker.appendChild(tip);
+            timelineBar.appendChild(marker);
+
+            // ajuste do balão para não sair da tela
+            marker.addEventListener("mouseenter", () => {
+              // forçar exibição para medir
+              tip.style.display = "block";
+              requestAnimationFrame(() => {
+                const tipRect = tip.getBoundingClientRect();
+                const vw = window.innerWidth;
+                const margin = 8; // margem mínima da borda da janela
+                let dx = 0;
+                if (tipRect.left < margin) dx = margin - tipRect.left;
+                else if (tipRect.right > vw - margin)
+                  dx = vw - margin - tipRect.right;
+                if (dx !== 0) {
+                  // desloca horizontalmente usando calc sobre o translate existente
+                  tip.style.transform = `translate(calc(-50% + ${dx}px), -140%)`;
+                } else {
+                  tip.style.transform = "translate(-50%, -140%)";
+                }
+              });
+            });
+            marker.addEventListener("mouseleave", () => {
+              // limpa alterações para voltar ao comportamento CSS padrão
+              tip.style.transform = "";
+              tip.style.display = "";
+            });
+
+            // event row
+            const row = document.createElement("div");
+            row.className = "event-row";
+            const timeCol = document.createElement("div");
+            timeCol.className = "time";
+            timeCol.textContent = ev.normalized.toFixed(3) + " s";
+            const labelCol = document.createElement("div");
+            labelCol.className = "label";
+            labelCol.textContent = ev.label;
+            const origCol = document.createElement("div");
+            origCol.className = "small";
+            origCol.textContent = "orig: " + ev.original.toFixed(3) + " s";
+            row.appendChild(timeCol);
+            row.appendChild(labelCol);
+            row.appendChild(origCol);
+
+            if (ev.type === "start") startList.appendChild(row);
+            else if (ev.type === "end") endList.appendChild(row);
+            else alertList.appendChild(row);
+          });
+
+          startSection.appendChild(startList);
+          endSection.appendChild(endList);
+          alertSection.appendChild(alertList);
+
+          eventsList.appendChild(startSection);
+          eventsList.appendChild(endSection);
+          eventsList.appendChild(alertSection);
+
+          summary.textContent = `Eventos: ${
+            parsed.events.length
+          } • início(original): ${parsed.minT.toFixed(
+            3
+          )} s • fim(original): ${parsed.maxT.toFixed(
+            3
+          )} s • duração(normalizada): ${parsed.duration.toFixed(3)} s`;
+        }
+
+        parseBtn.addEventListener("click", () => {
+          const text = input.value || "";
+          const parsed = parseText(text);
+          render(parsed);
+          // save last parsed to export buttons
+          window.__lastParsed = parsed;
+        });
+
+        fileInput.addEventListener("change", (e) => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            input.value = ev.target.result;
+            parseBtn.click();
+          };
+          reader.readAsText(f, "utf-8");
+        });
+
+        exportJson.addEventListener("click", () => {
+          const parsed = window.__lastParsed;
+          if (!parsed) {
+            alert("Nada para exportar. Parseie primeiro.");
+            return;
+          }
+          const blob = new Blob([JSON.stringify(parsed, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "timeline.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+
+        exportCsv.addEventListener("click", () => {
+          const parsed = window.__lastParsed;
+          if (!parsed) {
+            alert("Nada para exportar. Parseie primeiro.");
+            return;
+          }
+          const rows = [["label", "original_time", "normalized_time", "type"]];
+          parsed.events.forEach((ev) =>
+            rows.push([ev.label, ev.original, ev.normalized, ev.type])
+          );
+          const csv = rows
+            .map((r) =>
+              r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(",")
+            )
+            .join("\r\n");
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "timeline.csv";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+
+        // auto-parse initial content
+        parseBtn.click();
+      })();
+    </script>
+  </body>
+</html>
