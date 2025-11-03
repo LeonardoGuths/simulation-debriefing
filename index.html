@@ -27,7 +27,7 @@
         padding: 6px 10px;
       }
       .timeline-wrap {
-        margin-top: 12px;
+        margin-top: 4rem;
         border: 1px solid #ddd;
         padding: 12px;
         border-radius: 6px;
@@ -40,7 +40,64 @@
         border-radius: 6px;
         box-shadow: inset 0 -1px 0 #eaeaea;
         margin-bottom: 12px;
+        overflow: visible;
       }
+      .interval {
+        position: absolute;
+        height: 12px;
+        top: 18px;
+        border-radius: 4px;
+        pointer-events: auto; /* allow hover on interval */
+        cursor: default;
+      }
+      .interval .interval-tooltip {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -140%);
+        background: rgba(44,44,255, 0.85);
+        box-shadow: 0 0 6px rgba(44,44,255, 0.75);
+
+        color: #fff;
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        display: none;
+        opacity: 1;
+        pointer-events: none;
+        z-index: 1000;
+        width:fit-content;
+      }
+     /* badge that shows number of warnings inside an interval (orange) */
+     .interval .warning-badge {
+       position: absolute;
+       left: 50%;
+       top: 50%;
+       transform: translate(-50%, -50%);
+       background: #ff9800;
+       color: #fff;
+       padding: 2px 8px;
+       border-radius: 12px;
+       font-weight: 700;
+       font-size: 12px;
+       line-height: 1;
+       pointer-events: none;
+       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+       z-index: 900;
+       white-space: nowrap;
+     }
+    .interval .interval-tooltip .instrument-label { font-weight:700; margin-bottom:4px; }
+    .interval .interval-tooltip .alert-line { color: #ff9800; font-weight:600; }
+      .interval:hover .interval-tooltip {
+        display: block;
+      }
+           /* toggler support: when body has this class tooltips are forced visible */
+     .show-interval-tooltips .interval .interval-tooltip {
+       display: block !important;
+     }
+     .show-interval-tooltips .marker .tooltip {
+  display: block !important;
+}
       .marker {
         position: absolute;
         width: 2px;
@@ -49,14 +106,44 @@
       }
       /* color styles by type */
       .marker.type-start {
-        background: #28a745;
+        /* background: #28a745; */
+        display: none;
       } /* green */
       .marker.type-end {
-        background: #d9534f;
+        /* background: #d9534f; */
+        display: none !important;
       } /* red */
       .marker.type-alert {
-        background: #ff9800;
+        /* background: #ff9800; */
+        display: none !important;
+
       } /* orange */
+     /* pink for anamnesis questions */
+     .marker.type-anamnesis {
+       background: #e91e63;
+        box-shadow: 0 0 6px rgba(255, 0, 85, 0.75);
+
+     }
+     .marker.type-anamnesis .dot {
+       background: #e91e63; /* pink */
+       box-shadow: 0 0 6px rgba(255, 0, 85, 0.75);
+     }
+
+     .badge.anamnesis { background: #e91e63; }
+    /* hygiene marker style (Put Gloves) */
+    .marker.type-hygiene {
+        background: #00cc1c !important;
+        box-shadow: 0 0 6px rgba(0, 255, 0, 0.85) !important;
+        display: block !important;
+      }
+     .marker.type-hygiene .dot,
+      .marker.type-hygiene.type-start .dot,
+      .marker.type-hygiene.type-end .dot {
+        background: #00cc1c !important;
+        box-shadow: 0 0 6px rgba(0, 255, 0, 0.85) !important;
+        display: block !important;
+      }
+     .badge.hygiene { background: #0066cc; }
       .marker .dot {
         position: absolute;
         left: 50%;
@@ -156,6 +243,21 @@
       .export {
         margin-left: auto;
       }
+     /* toggle button styles */
+     #toggleIntervalsBtn {
+       border: 0;
+       color: #fff;
+       background: #111; /* default hidden = black */
+       border-radius: 4px;
+       cursor: pointer;
+     }
+     #toggleIntervalsBtn.on {
+       background: #2e8b57; /* green when showing tooltips */
+     }
+     #toggleIntervalsBtn.off {
+       background: #111; /* black when hidden */
+     }
+
     </style>
   </head>
   <body>
@@ -170,19 +272,43 @@
     </p>
 
     <textarea id="inputText">
-observation: 40.84085, stick_start observation: 40.84085, Examining throat with a stick before hygiene observation: 40.84085, Examining throat with a stick before anamnesis observation: 42.45923, stick_end observation: 45.94617, steto_start observation: 45.94617, Using stethoscope before hygiene observation: 45.94617, Using stethoscope before anamnesis observation: 46.91853, steto_end observation: 49.29418, stick_start observation: 49.29418, Examining throat with a stick before hygiene observation: 49.29418, Examining throat with a stick before anamnesis observation: 49.54818, stick_end observation: 53.16912, otoscope_start observation: 53.16912, Using otoscope before hygiene observation: 53.16912, Using otoscope before anamnesis observation: 53.75177, otoscope_end observation: 59.76503, audioClip observation: 64.5723, otoscope_start observation: 64.5723, Using otoscope before hygiene observation: 64.78034, otoscope_end observation: 68.27122, steto_start observation: 68.27122, Using stethoscope before hygiene observation: 68.50159, steto_end observation: 73.71736, glovesScript_start observation: 75.23737, glovesScript_end observation: 80.33521, steto_start observation: 81.3203, steto_end observation: 89.03033, otoscope_start observation: 100.4051, otoscope_end observation: 105.3222, correctDiagnosis observation: 105.3222, selectedDiagnosis observation: 105.3222, correctTreatment</textarea
-    >
+observation: 86.44, station_start
+observation: 95.69093, steto_start
+observation: 95.69093, Using stethoscope before hygiene
+observation: 95.69093, Using stethoscope before anamnesis
+observation: 97.15615, steto_end
+observation: 98.56265, glovesScript_start
+observation: 99.56265, glovesScript_end
+observation: 102.5382, steto_start
+observation: 102.5382, Using stethoscope before anamnesis
+observation: 103.0106, steto_end
+observation: 104.0106, otoscope_start
+observation: 104.0106, Using otoscope before anamnesis
+observation: 107.0106, otoscope_end
+observation: 110.633, anamnesis: Você bebeu água?
+observation: 111.633, anamnesis: Você bebeu refri?
+observation: 112.633, anamnesis: Você bebeu cerveja?
+observation: 114.3999, steto_start
+observation: 115.6103, steto_end
+observation: 119.0633, station_end
+
+</textarea>
 
     <div class="controls">
       <button id="parseBtn">Parsear e gerar timeline</button>
       <input type="file" id="fileInput" accept=".txt" />
       <button id="exportJson">Exportar JSON</button>
       <button id="exportCsv">Exportar CSV</button>
+      
       <div class="small" id="summary"></div>
     </div>
 
+
     <div class="timeline-wrap" id="output" style="display: none">
       <div class="timeline" id="timelineBar"></div>
+      <button id="toggleIntervalsBtn" type="button" aria-pressed="false" style="display:block; padding:6px 10px; margin: 0.5rem auto;"></button>
+        
+      </button>
       <div class="events" id="eventsList"></div>
     </div>
 
@@ -198,48 +324,119 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
         const exportJson = document.getElementById("exportJson");
         const exportCsv = document.getElementById("exportCsv");
 
+        const toggleIntervalsBtn = document.getElementById("toggleIntervalsBtn");
+        if (toggleIntervalsBtn) {
+          // initialize text state
+          const updateBtn = (on) => {
+            toggleIntervalsBtn.textContent = on ? "Ocultar tooltips" : "Mostrar tooltips";
+            toggleIntervalsBtn.setAttribute("aria-pressed", on ? "true" : "false");
+            toggleIntervalsBtn.classList.toggle("on", on);
+            toggleIntervalsBtn.classList.toggle("off", !on);
+          };
+          // default off (hidden)
+          updateBtn(false);
+          toggleIntervalsBtn.addEventListener("click", () => {
+            const nowOn = document.body.classList.toggle("show-interval-tooltips");
+            updateBtn(nowOn);
+          });
+        }
+
+        function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
         function parseText(text) {
-          // split by newlines OR commas — many inputs use commas
-          const tokens = text
-            .split(/\r?\n|,/)
-            .map((t) => t.trim())
-            .filter(Boolean);
-          const events = [];
-          const numberRE = /([0-9]+(?:\.[0-9]+)?)/;
-          tokens.forEach((tok) => {
-            // try to find the first number in token
-            const m = tok.match(numberRE);
-            if (!m) return;
-            const time = parseFloat(m[1]);
-            // build a label by removing the number and common prefixes like "observation:"
-            let label = tok
-              .replace(numberRE, "")
-              .replace(/observation:/gi, "")
-              .trim();
-            // remove duplicate extra punctuation and leading/trailing separators
-            label = label.replace(/^[\s:,-]+|[\s:,-]+$/g, "").trim();
-            if (!label) label = "event";
+  // split only by lines so "time, label" stays on the same line
+  const lines = text.split(/\r?\n/).map(t => t.trim()).filter(Boolean);
+  const events = [];
+  const numberRE = /([0-9]+(?:\.[0-9]+)?)/;
 
-            // determine type by suffix
-            const lower = label.toLowerCase();
-            let type = "alert";
-            if (/_start$/i.test(lower)) type = "start";
-            else if (/_end$/i.test(lower)) type = "end";
+  lines.forEach((line) => {
+    // find first number (time)
+    const m = line.match(numberRE);
+    if (!m) return;
+    const time = parseFloat(m[1]);
 
-            events.push({ original: time, label, type });
-          });
-          if (events.length === 0) return [];
-          // sort by original time
-          events.sort((a, b) => a.original - b.original);
-          const minT = events[0].original;
-          const maxT = events[events.length - 1].original;
-          const duration = Math.max(0, maxT - minT);
-          // annotate normalized time and percent
-          events.forEach((ev) => {
-            ev.normalized = +(ev.original - minT).toFixed(6);
-            ev.percent = duration === 0 ? 0 : (ev.normalized / duration) * 100;
-          });
-          return { events, minT, maxT, duration };
+    // try to get label text that follows the time (preferred)
+    let afterIdx = line.indexOf(m[1]) + m[1].length;
+    let rest = line.substring(afterIdx).trim();
+
+    // If rest starts with a comma (", label") remove it
+    rest = rest.replace(/^,/, '').trim();
+
+    // If nothing after the number, try part after the first colon or after the first comma segments
+    if (!rest) {
+      const parts = line.split(',');
+      if (parts.length > 1) rest = parts.slice(1).join(',').trim();
+      else {
+        const colon = line.indexOf(':');
+        if (colon >= 0) rest = line.substring(colon + 1).trim();
+      }
+      rest = rest.replace(numberRE, '').trim(); // remove any number left
+      rest = rest.replace(/^,/, '').trim();
+    }
+
+    // remove common prefix like "observation:" if present
+    let label = rest.replace(/observation:/i, '').trim();
+    // if anamnesis: should display only the question/text after the colon
+    let isAnamnesis = false;
+    const anam = label.match(/^anamnesis\s*:\s*(.+)/i);
+    if (anam) {
+      label = anam[1].trim();
+      isAnamnesis = true;
+    }
+
+    // fallback: try text before the colon if still empty
+    if (!label) {
+      const colon = line.indexOf(':');
+      if (colon >= 0) label = line.substring(0, colon).trim();
+    }
+
+    if (!label) label = 'event';
+
+    // normalize label punctuation
+    label = label.replace(/^[\s:,-]+|[\s:,-]+$/g, '').trim();
+
+    // determine type (_start/_end suffix)
+    const lower = label.toLowerCase();
+    let type = 'alert';
+    if (/_start$/i.test(lower)) type = 'start';
+    else if (/_end$/i.test(lower)) type = 'end';
+    else if (isAnamnesis) type = 'anamnesis';
+
+    events.push({ original: time, label, type });
+  });
+
+  // ignore tags by prefix (case-insensitive) — supports "audioclip", "rightHand", etc.
+  const IGNORED_TAGS = [ "rightHand", "leftHand", "vision", "glovesScript_end"];
+  const filteredEvents = events.filter(ev =>
+    !IGNORED_TAGS.some(tag => ev.label.toLowerCase().startsWith(tag.toLowerCase()))
+  );
+
+  if (filteredEvents.length === 0) return [];
+  filteredEvents.sort((a, b) => a.original - b.original);
+  const minT = filteredEvents[0].original;
+  const maxT = filteredEvents[filteredEvents.length - 1].original;
+  const duration = Math.max(0, maxT - minT);
+  filteredEvents.forEach(ev => {
+    ev.normalized = +(ev.original - minT).toFixed(6);
+    ev.percent = duration === 0 ? 0 : (ev.normalized / duration) * 100;
+  });
+  return { events: filteredEvents, minT, maxT, duration };
+}
+
+        // Creates a consistent color for an id base (hue)
+        function colorForIdBase(idBase) {
+          let h = 0;
+          for (let i = 0; i < idBase.length; i++) {
+            h = (h * 31 + idBase.charCodeAt(i)) % 360;
+          }
+          return `hsl(${h} 80% 50%)`;
         }
 
         function render(parsed) {
@@ -261,9 +458,131 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
           const maxStack = Math.max(1, ...Object.values(countMap));
           // increase timeline height to fit stacks
           const baseHeight = 48;
-          const extraPerStack = 10; // px per stacked marker
+          const extraPerStack = 0; // px per stacked marker
+          // const extraPerStack = 10; // px per stacked marker
           const desiredHeight = baseHeight + (maxStack - 1) * extraPerStack;
           timelineBar.style.height = desiredHeight + "px";
+
+          // create interval bars between *_start and corresponding *_end
+          // build map of starts and ends by base id
+          const startsByBase = {};
+          const endsByBase = {};
+          parsed.events.forEach((ev) => {
+            const lower = ev.label.toLowerCase();
+            if (lower.endsWith("_start")) {
+              const base = ev.label.slice(0, -6);
+              const baseLower = base.toLowerCase();
+              // skip creating intervals for glovesScript (we only want a marker)
+              if (baseLower === "glovesscript") return;
+              startsByBase[base] = startsByBase[base] || [];
+              startsByBase[base].push(ev);
+           } else if (lower.endsWith("_end")) {
+              const base = ev.label.slice(0, -4);
+              const baseLower = base.toLowerCase();
+              // skip ends for glovesScript as well
+              if (baseLower === "glovesscript") return;
+              endsByBase[base] = endsByBase[base] || [];
+              endsByBase[base].push(ev);
+            }
+          });
+
+          const intervals = [];
+          // for each start, find the nearest end with time >= start.time
+          Object.keys(startsByBase).forEach((base) => {
+            const starts = startsByBase[base].sort((a, b) => a.original - b.original);
+            const ends = (endsByBase[base] || []).sort((a, b) => a.original - b.original);
+            let ei = 0;
+            for (let si = 0; si < starts.length; si++) {
+              const s = starts[si];
+              // advance ei until end time >= start time
+              while (ei < ends.length && ends[ei].original < s.original) ei++;
+              if (ei < ends.length) {
+                const e = ends[ei];
+                intervals.push({ base, startEv: s, endEv: e });
+                ei++; // consume that end so it's matched once
+              }
+            }
+          });
+
+          // draw interval bars first (under markers)
+          intervals.forEach((it) => {
+            const left = it.startEv.percent;
+            const right = it.endEv.percent;
+            const width = Math.max(0.2, right - left);
+            const div = document.createElement("div");
+            div.className = "interval";
+            div.style.left = `${left}%`;
+            div.style.width = `${width}%`;
+
+            // per-base styling: station -> thin black, steto -> thick yellow, default -> hashed color
+            const baseLower = it.base.toLowerCase();
+            const instrumentNames = {
+              steto: "Stethoscope Exam",
+              otoscope: "Otoscope Exam",
+              stick: "Throat Exam"
+            };
+            if (baseLower === "station") {
+              div.style.background = "#000";
+              div.style.height = "8px"; // thinner
+              div.style.opacity = "0.25";
+              div.style.top = "21px";
+            } else if (baseLower === "steto" || baseLower === "otoscope" || baseLower === "stick") {
+              div.style.background = "rgba(44,44,255,0.75)";
+              div.style.boxShadow = "0 0 6px rgba(44,44,255,0.95)";
+              div.style.height = "32px"; // thicker
+              div.style.top = "10px";
+              // create tooltip element showing the instrument name
+
+              const label = instrumentNames[baseLower] || (it.base.charAt(0).toUpperCase() + it.base.slice(1));
+
+              // compute duration between start and end (seconds), format to 1 decimal
+              let durationText = "";
+              if (it.endEv && typeof it.endEv.original === "number" && typeof it.startEv.original === "number") {
+                const dur = it.endEv.original - it.startEv.original;
+                if (!isNaN(dur)) durationText = `${dur.toFixed(1)}s`;
+              }
+
+              // collect alerts that occur at the same original time as the start event
+              const EPS = 1e-4;
+              const sameTimeAlerts = parsed.events
+                .filter(ev => ev.type === 'alert' && Math.abs(ev.original - it.startEv.original) < EPS)
+                .map(ev => ev.label)
+                .filter(Boolean);
+
+              const tip = document.createElement("div");
+              tip.className = "interval-tooltip";
+
+              // instrument label + optional duration on first line
+              let html = `<div class="instrument-label">${escapeHtml(label)}${durationText ? `: ${escapeHtml(durationText)}` : ''}</div>`;
+
+              if (sameTimeAlerts.length > 0) {
+                html += sameTimeAlerts.map(a => `<div class="alert-line">${escapeHtml(a)}</div>`).join('');
+              }
+              tip.innerHTML = html;
+              div.appendChild(tip);
+              // compute number of alert-type events that fall inside this interval (inclusive)
+              const EPSs = 1e-6;
+              const warnCount = parsed.events.filter(ev =>
+                ev.type === 'alert' &&
+                ev.original + EPSs >= it.startEv.original &&
+                ev.original - EPSs <= it.endEv.original
+              ).length;
+
+              if (warnCount > 0) {
+                const badge = document.createElement('div');
+                badge.className = 'warning-badge';
+                badge.textContent = String(warnCount);
+                // reduce font for large counts
+                if (warnCount > 9) badge.style.fontSize = '11px';
+                div.appendChild(badge);
+              }
+            } else {
+              div.style.background = colorForIdBase(it.base);
+            }
+
+            timelineBar.appendChild(div);
+          });
+
 
           // create sections for types
           const startSection = document.createElement("div");
@@ -274,6 +593,10 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
           endSection.className = "section";
           endSection.innerHTML =
             '<div class="section-head"><span class="badge end"></span> Fins (_end)</div>';
+          const anamSection = document.createElement("div");
+          anamSection.className = "section";
+          anamSection.innerHTML =
+            '<div class="section-head"><span class="badge anamnesis"></span> Anamneses</div>';
           const alertSection = document.createElement("div");
           alertSection.className = "section";
           alertSection.innerHTML =
@@ -281,6 +604,7 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
 
           const startList = document.createElement("div");
           const endList = document.createElement("div");
+          const anamList = document.createElement("div");
           const alertList = document.createElement("div");
 
           // counters to assign stacking index per percent key
@@ -293,9 +617,36 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
             assigned[key] = idx + 1;
 
             // marker on timeline
+
             const marker = document.createElement("div");
-            marker.className = "marker type-" + ev.type;
+            // build classes conditionally so glovesScript_start does NOT get "type-start"
+            const markerClasses = ["marker"];
+            // compute the base name (without _start/_end) and use it here
+            const baseStart = ev.label.replace(/(_start|_end)$/i, "").toLowerCase();
+            if (baseStart === "glovesscript") {
+              markerClasses.push("type-hygiene");
+            }
+            // only add the generic type-* when it's not glovesScript_start (or glovesScript_end if you want)
+            if (!(baseStart === "glovesscript" && ev.type === "start")) {
+              markerClasses.push("type-" + ev.type);
+            }
+            marker.className = markerClasses.join(" ");
             marker.style.left = ev.percent + "%";
+
+// per-label marker appearance (match intervals): thin black for station, thick/yellow for steto
+            const labelBase = ev.label.replace(/(_start|_end)$/i, "").toLowerCase();
+            if (labelBase === "station") {
+              marker.style.width = "1px";
+              marker.style.background = "#000";
+            } 
+            // compute display label (allows replacing glovesScript_* with "Put Gloves")
+            let displayLabel = ev.label;
+            if (displayLabel === "glovesScript_start") {
+              displayLabel = "Put Gloves (hygiene)";
+              marker.classList.add("type-hygiene");
+            }
+
+
 
             // stagger vertically to avoid overlap
             const topBase = 6; // original top
@@ -309,20 +660,26 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
             marker.style.height = reducedHeight + "px";
 
             // dot + tooltip
-            // dot + tooltip
             const dot = document.createElement("div");
             dot.className = "dot";
             marker.appendChild(dot);
+// dot color override to match marker when customized
+            if (labelBase === "station") {
+              dot.style.background = "#000";
+              dot.style.boxShadow = "0 0 6px rgba(0,0,0,0.25)";
+            } 
+
             const tip = document.createElement("div");
             tip.className = "tooltip";
-            tip.textContent =
-              ev.label +
-              " — " +
-              ev.normalized.toFixed(3) +
-              " s (orig: " +
-              ev.original.toFixed(3) +
-              " s) • type: " +
-              ev.type;
+            tip.textContent = displayLabel;
+            // tip.textContent =
+            //   ev.label +
+            //   " — " +
+            //   ev.normalized.toFixed(3) +
+            //   " s (orig: " +
+            //   ev.original.toFixed(3) +
+            //   " s) • type: " +
+            //   ev.type;
             marker.appendChild(tip);
             timelineBar.appendChild(marker);
 
@@ -360,7 +717,8 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
             timeCol.textContent = ev.normalized.toFixed(3) + " s";
             const labelCol = document.createElement("div");
             labelCol.className = "label";
-            labelCol.textContent = ev.label;
+            labelCol.textContent = displayLabel;
+
             const origCol = document.createElement("div");
             origCol.className = "small";
             origCol.textContent = "orig: " + ev.original.toFixed(3) + " s";
@@ -370,15 +728,19 @@ observation: 40.84085, stick_start observation: 40.84085, Examining throat with 
 
             if (ev.type === "start") startList.appendChild(row);
             else if (ev.type === "end") endList.appendChild(row);
+            else if (ev.type === "anamnesis") anamList.appendChild(row);
+
             else alertList.appendChild(row);
           });
 
           startSection.appendChild(startList);
           endSection.appendChild(endList);
+          anamSection.appendChild(anamList);
           alertSection.appendChild(alertList);
 
           eventsList.appendChild(startSection);
           eventsList.appendChild(endSection);
+          eventsList.appendChild(anamSection);
           eventsList.appendChild(alertSection);
 
           summary.textContent = `Eventos: ${
