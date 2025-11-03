@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Timeline Parser</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 20px;
+        color: #222;
+      }
+      textarea {
+        width: 100%;
+        height: 160px;
+        font-family: monospace;
+        margin-bottom: 10px;
+      }
+      .controls {
+        margin-bottom: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button,
+      input[type="file"] {
+        padding: 6px 10px;
+      }
+      .timeline-wrap {
+        margin-top: 4rem;
+        border: 1px solid #ddd;
+        padding: 12px;
+        border-radius: 6px;
+      }
+      
+     .station-info {
+       display: flex;
+       gap: 12px;
+       flex-wrap: wrap;
+       margin-bottom: 12px;
+       align-items: center;
+     }
+     .info-item {
+       background: #fff;
+       border: 1px solid #eee;
+       padding: 8px 10px;
+       border-radius: 6px;
+       min-width: 180px;
+       display: flex;
+       flex-direction: column;
+       gap: 6px;
+     }
+     .info-item .label { font-weight:700; }
+     .info-item .value { font-family: monospace; color:#333;
+       font-size: 16px;  }
+     .rating-row { display:flex; gap:8px; align-items:center; }
+     .rating-row select { padding:4px 6px; border-radius:4px; }
+     .rating-hints { font-size:12px; color:#666; margin-top:4px; }
+
+         /* colored scale + marker */
+     .rating-scale {
+       position: relative;
+       height: 14px;
+       /* border-radius: 8px; */
+       overflow: hidden;
+       margin-top: 16px;
+       background: linear-gradient(90deg, #f8f8f8, #f8f8f8);
+       border: 1px solid #eee;
+      overflow: visible;
+      /* padding: 0 8px; */
+     }
+     .rating-scale .seg { height: 100%; float: left; }
+     /* segments widths map to numeric scale 1..5:
+        1-2 -> poor (40%), 3-4 -> acceptable (40%), 5 -> good (20%) */
+     .rating-scale .seg.poor { width: 45%; background: linear-gradient(90deg,#e74c3c,#ff8248); }
+     .rating-scale .seg.ok { width: 40%; background: linear-gradient(90deg,#f1b50f,#ffd966); }
+     .rating-scale .seg.good { width: 15%; background: linear-gradient(90deg,#2ecc71,#60d68b); }
+     .scale-marker {
+       position: absolute;
+       top: 50%;
+       transform: translate(-50%,-50%);
+       width: 2px;
+       height: 20px;
+       background: #222;
+       box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+       border-radius: 1px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+     }
+     #scale-duration {
+  /* five-color band: red -> yellow -> green -> yellow -> red */
+  background: linear-gradient(
+    90deg,
+    #e74c3c 0%,
+    #f1c40f 20%,
+    #2ecc71 50%,
+    #f1c40f 80%,
+    #e74c3c 100%
+  );
+}
+#scale-duration .seg { display: none; }
+    .scale-marker.user-marker {
+      background: #0b66ff;
+      width: 4px;
+    }
+     .scale-marker .label {
+       position: absolute;
+       top: -22px;
+       left: 50%;
+       transform: translateX(-50%);
+       font-size: 12px;
+       background: #fff;
+       padding: 2px 6px;
+       border-radius: 6px;
+       border: 1px solid #eee;
+       white-space: nowrap;
+     }
+
+      .timeline {
+        position: relative;
+        min-height: 48px;
+        height: 48px; /* will be overridden inline quando necessário */
+        background: linear-gradient(90deg, #f8f8f8, #fff);
+        border-radius: 6px;
+        box-shadow: inset 0 -1px 0 #eaeaea;
+        margin-bottom: 12px;
+        overflow: visible;
+      }
+      .interval {
+        position: absolute;
+        height: 12px;
+        top: 18px;
+        border-radius: 4px;
+        pointer-events: auto; /* allow hover on interval */
+        cursor: default;
+      }
+      .interval .interval-tooltip {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -140%);
+        background: rgba(44,44,255, 0.85);
+        box-shadow: 0 0 6px rgba(44,44,255, 0.75);
+
+        color: #fff;
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        display: none;
+        opacity: 1;
+        pointer-events: none;
+        z-index: 1000;
+        width:fit-content;
+      }
+     /* badge that shows number of warnings inside an interval (orange) */
+     .interval .warning-badge {
+       position: absolute;
+       left: 50%;
+       top: 50%;
+       transform: translate(-50%, -50%);
+       background: #ff9800;
+       color: #fff;
+       padding: 2px 8px;
+       border-radius: 12px;
+       font-weight: 700;
+       font-size: 12px;
+       line-height: 1;
+       pointer-events: none;
+       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+       z-index: 900;
+       white-space: nowrap;
+     }
+    .interval .interval-tooltip .instrument-label { font-weight:700; margin-bottom:4px; }
+    .interval .interval-tooltip .alert-line { color: #ff9800; font-weight:600; }
+      .interval:hover .interval-tooltip {
+        display: block;
+      }
+           /* toggler support: when body has this class tooltips are forced visible */
+     .show-interval-tooltips .interval .interval-tooltip {
+       display: block !important;
+     }
+     .show-interval-tooltips .marker .tooltip {
+  display: block !important;
+}
+      .marker {
+        position: absolute;
+        width: 2px;
+        transform: translateX(-50%);
+        cursor: default;
+      }
+      /* color styles by type */
+      .marker.type-start {
+        /* background: #28a745; */
+        display: none;
+      } /* green */
+      .marker.type-end {
+        /* background: #d9534f; */
+        display: none !important;
+      } /* red */
+      .marker.type-alert {
+        /* background: #ff9800; */
+        display: none !important;
+
+      } /* orange */
+     /* pink for anamnesis questions */
+     .marker.type-anamnesis {
+       background: #e91e63;
+        box-shadow: 0 0 6px rgba(255, 0, 85, 0.75);
+
+     }
+     .marker.type-anamnesis .dot {
+       background: #e91e63; /* pink */
+       box-shadow: 0 0 6px rgba(255, 0, 85, 0.75);
+     }
+
+     .badge.anamnesis { background: #e91e63; }
+    /* hygiene marker style (Put Gloves) */
+    .marker.type-hygiene {
+        background: #00cc1c !important;
+        box-shadow: 0 0 6px rgba(0, 255, 0, 0.85) !important;
+        display: block !important;
+      }
+     .marker.type-hygiene .dot,
+      .marker.type-hygiene.type-start .dot,
+      .marker.type-hygiene.type-end .dot {
+        background: #00cc1c !important;
+        box-shadow: 0 0 6px rgba(0, 255, 0, 0.85) !important;
+        display: block !important;
+      }
+     .badge.hygiene { background: #0066cc; }
+      .marker .dot {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        top: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+      }
+      .marker.type-start .dot {
+        background: #28a745;
+        box-shadow: 0 0 6px rgba(40, 167, 69, 0.25);
+      }
+      .marker.type-end .dot {
+        background: #d9534f;
+        box-shadow: 0 0 6px rgba(217, 83, 79, 0.25);
+      }
+      .marker.type-alert .dot {
+        background: #ff9800;
+        box-shadow: 0 0 6px rgba(255, 152, 0, 0.25);
+      }
+
+      .tooltip {
+        position: absolute;
+        background: #222;
+        color: #fff;
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        transform: translate(-50%, -140%);
+        display: none;
+        pointer-events: none;
+        z-index: 1000;
+      }
+      .marker:hover .tooltip {
+        display: block;
+      }
+      .events {
+        max-height: 320px;
+        overflow: auto;
+        border-top: 1px dashed #eee;
+        padding-top: 8px;
+        display: grid;
+        gap: 12px;
+      }
+      .section {
+        border-radius: 4px;
+        padding: 6px;
+        background: #fafafa;
+        border: 1px solid #f0f0f0;
+      }
+      .section-head {
+        font-weight: 700;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .badge {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+      .badge.start {
+        background: #28a745;
+      }
+      .badge.end {
+        background: #d9534f;
+      }
+      .badge.alert {
+        background: #ff9800;
+      }
+
+      .event-row {
+        padding: 6px 4px;
+        border-bottom: 1px solid #fafafa;
+        font-size: 14px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .time {
+        color: #666;
+        width: 110px;
+        font-family: monospace;
+      }
+      .label {
+        flex: 1;
+      }
+      .small {
+        font-size: 13px;
+        color: #666;
+      }
+      .export {
+        margin-left: auto;
+      }
+     /* toggle button styles */
+     #toggleIntervalsBtn {
+       border: 0;
+       color: #fff;
+       background: #111; /* default hidden = black */
+       border-radius: 4px;
+       cursor: pointer;
+     }
+     #toggleIntervalsBtn.on {
+       background: #2e8b57; /* green when showing tooltips */
+     }
+     #toggleIntervalsBtn.off {
+       background: #111; /* black when hidden */
+     }
+
+    </style>
+  </head>
+  <body>
+    <h2>Parser de timeline</h2>
+    <p class="small">
+      Cole o texto de entrada abaixo (ou carregue um arquivo .txt). O parser
+      encontra timestamps (números) em cada item, normaliza para 0..final e
+      desenha a timeline. Eventos são classificados por tipo:
+      <span class="badge start"></span> _start (verde),
+      <span class="badge end"></span> _end (vermelho),
+      <span class="badge alert"></span> outros (laranja).
+    </p>
+
+    <textarea id="inputText">
+observation: 86.44, station_start
+observation: 95.69093, steto_start
+observation: 95.69093, Using stethoscope before hygiene
+observation: 95.69093, Using stethoscope before anamnesis
+observation: 97.15615, steto_end
+observation: 98.56265, glovesScript_start
+observation: 99.56265, glovesScript_end
+observation: 102.5382, steto_start
+observation: 102.5382, Using stethoscope before anamnesis
+observation: 103.0106, steto_end
+observation: 104.0106, otoscope_start
+observation: 104.0106, Using otoscope before anamnesis
+observation: 107.0106, otoscope_end
+observation: 110.633, anamnesis: Você bebeu água?
+observation: 111.633, anamnesis: Você bebeu refri?
+observation: 112.633, anamnesis: Você bebeu cerveja?
+observation: 114.3999, steto_start
+observation: 115.6103, steto_end
+observation: 119.0633, station_end
+
+</textarea>
+
+    <div class="controls">
+      <button id="parseBtn">Parsear e gerar timeline</button>
+      <input type="file" id="fileInput" accept=".txt" />
+      <button id="exportJson">Exportar JSON</button>
+      <button id="exportCsv">Exportar CSV</button>
+      
+      <div class="small" id="summary"></div>
+    </div>
+
+
+    <div class="timeline-wrap" id="output" style="display: none">
+      <div id="stationInfo" class="station-info" aria-live="polite">
+        <!-- preenchido dinamicamente: tempo normalizado, qtd exames fisicos, exames laboratoriais, perguntas + escalas -->
+      </div>
+      <div class="timeline" id="timelineBar"></div>
+      <button id="toggleIntervalsBtn" type="button" aria-pressed="false" style="display:block; padding:6px 10px; margin: 0.5rem auto;"></button>
+        
+      </button>
+      <div class="events" id="eventsList"></div>
+    </div>
+
+    <script>
+      (function () {
+        const input = document.getElementById("inputText");
+        const parseBtn = document.getElementById("parseBtn");
+        const fileInput = document.getElementById("fileInput");
+        const timelineWrap = document.getElementById("output");
+        const timelineBar = document.getElementById("timelineBar");
+        const stationInfo = document.getElementById("stationInfo");
+        const eventsList = document.getElementById("eventsList");
+        const summary = document.getElementById("summary");
+        const exportJson = document.getElementById("exportJson");
+        const exportCsv = document.getElementById("exportCsv");
+
+        const toggleIntervalsBtn = document.getElementById("toggleIntervalsBtn");
+        if (toggleIntervalsBtn) {
+          // initialize text state
+          const updateBtn = (on) => {
+            toggleIntervalsBtn.textContent = on ? "Ocultar tooltips" : "Mostrar tooltips";
+            toggleIntervalsBtn.setAttribute("aria-pressed", on ? "true" : "false");
+            toggleIntervalsBtn.classList.toggle("on", on);
+            toggleIntervalsBtn.classList.toggle("off", !on);
+          };
+          // default off (hidden)
+          updateBtn(false);
+          toggleIntervalsBtn.addEventListener("click", () => {
+            const nowOn = document.body.classList.toggle("show-interval-tooltips");
+            updateBtn(nowOn);
+          });
+        }
+
+        function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function parseText(text) {
+  // split only by lines so "time, label" stays on the same line
+  const lines = text.split(/\r?\n/).map(t => t.trim()).filter(Boolean);
+  const events = [];
+  const numberRE = /([0-9]+(?:\.[0-9]+)?)/;
+
+  lines.forEach((line) => {
+    // find first number (time)
+    const m = line.match(numberRE);
+    if (!m) return;
+    const time = parseFloat(m[1]);
+
+    // try to get label text that follows the time (preferred)
+    let afterIdx = line.indexOf(m[1]) + m[1].length;
+    let rest = line.substring(afterIdx).trim();
+
+    // If rest starts with a comma (", label") remove it
+    rest = rest.replace(/^,/, '').trim();
+
+    // If nothing after the number, try part after the first colon or after the first comma segments
+    if (!rest) {
+      const parts = line.split(',');
+      if (parts.length > 1) rest = parts.slice(1).join(',').trim();
+      else {
+        const colon = line.indexOf(':');
+        if (colon >= 0) rest = line.substring(colon + 1).trim();
+      }
+      rest = rest.replace(numberRE, '').trim(); // remove any number left
+      rest = rest.replace(/^,/, '').trim();
+    }
+
+    // remove common prefix like "observation:" if present
+    let label = rest.replace(/observation:/i, '').trim();
+    // if anamnesis: should display only the question/text after the colon
+    let isAnamnesis = false;
+    const anam = label.match(/^anamnesis\s*:\s*(.+)/i);
+    if (anam) {
+      label = anam[1].trim();
+      isAnamnesis = true;
+    }
+
+    // fallback: try text before the colon if still empty
+    if (!label) {
+      const colon = line.indexOf(':');
+      if (colon >= 0) label = line.substring(0, colon).trim();
+    }
+
+    if (!label) label = 'event';
+
+    // normalize label punctuation
+    label = label.replace(/^[\s:,-]+|[\s:,-]+$/g, '').trim();
+
+    // determine type (_start/_end suffix)
+    const lower = label.toLowerCase();
+    let type = 'alert';
+    if (/_start$/i.test(lower)) type = 'start';
+    else if (/_end$/i.test(lower)) type = 'end';
+    else if (isAnamnesis) type = 'anamnesis';
+
+    events.push({ original: time, label, type });
+  });
+
+  // ignore tags by prefix (case-insensitive) — supports "audioclip", "rightHand", etc.
+  const IGNORED_TAGS = [ "rightHand", "leftHand", "vision", "glovesScript_end"];
+  const filteredEvents = events.filter(ev =>
+    !IGNORED_TAGS.some(tag => ev.label.toLowerCase().startsWith(tag.toLowerCase()))
+  );
+
+  if (filteredEvents.length === 0) return [];
+  filteredEvents.sort((a, b) => a.original - b.original);
+  const minT = filteredEvents[0].original;
+  const maxT = filteredEvents[filteredEvents.length - 1].original;
+  const duration = Math.max(0, maxT - minT);
+  filteredEvents.forEach(ev => {
+    ev.normalized = +(ev.original - minT).toFixed(6);
+    ev.percent = duration === 0 ? 0 : (ev.normalized / duration) * 100;
+  });
+  return { events: filteredEvents, minT, maxT, duration };
+}
+
+        // Creates a consistent color for an id base (hue)
+        function colorForIdBase(idBase) {
+          let h = 0;
+          for (let i = 0; i < idBase.length; i++) {
+            h = (h * 31 + idBase.charCodeAt(i)) % 360;
+          }
+          return `hsl(${h} 80% 50%)`;
+        }
+
+        function render(parsed) {
+          if (!parsed || parsed.events.length === 0) {
+            timelineWrap.style.display = "none";
+            summary.textContent = "Nenhum evento encontrado.";
+            return;
+          }
+          timelineWrap.style.display = "block";
+          timelineBar.innerHTML = "";
+          eventsList.innerHTML = "";
+          stationInfo.innerHTML = ""; // limpar área de resumo antes de popular
+
+
+          // compute stacking counts for same-percent events (avoid float issues by rounding)
+          const countMap = {};
+          parsed.events.forEach((ev) => {
+            const key = ev.percent.toFixed(3);
+            countMap[key] = (countMap[key] || 0) + 1;
+          });
+          const maxStack = Math.max(1, ...Object.values(countMap));
+          // increase timeline height to fit stacks
+          const baseHeight = 48;
+          const extraPerStack = 0; // px per stacked marker
+          // const extraPerStack = 10; // px per stacked marker
+          const desiredHeight = baseHeight + (maxStack - 1) * extraPerStack;
+          timelineBar.style.height = desiredHeight + "px";
+
+          // create interval bars between *_start and corresponding *_end
+          // build map of starts and ends by base id
+          const startsByBase = {};
+          const endsByBase = {};
+          parsed.events.forEach((ev) => {
+            const lower = ev.label.toLowerCase();
+            if (lower.endsWith("_start")) {
+              const base = ev.label.slice(0, -6);
+              const baseLower = base.toLowerCase();
+              // skip creating intervals for glovesScript (we only want a marker)
+              if (baseLower === "glovesscript") return;
+              startsByBase[base] = startsByBase[base] || [];
+              startsByBase[base].push(ev);
+           } else if (lower.endsWith("_end")) {
+              const base = ev.label.slice(0, -4);
+              const baseLower = base.toLowerCase();
+              // skip ends for glovesScript as well
+              if (baseLower === "glovesscript") return;
+              endsByBase[base] = endsByBase[base] || [];
+              endsByBase[base].push(ev);
+            }
+          });
+
+          const intervals = [];
+          // for each start, find the nearest end with time >= start.time
+          Object.keys(startsByBase).forEach((base) => {
+            const starts = startsByBase[base].sort((a, b) => a.original - b.original);
+            const ends = (endsByBase[base] || []).sort((a, b) => a.original - b.original);
+            let ei = 0;
+            for (let si = 0; si < starts.length; si++) {
+              const s = starts[si];
+              // advance ei until end time >= start time
+              while (ei < ends.length && ends[ei].original < s.original) ei++;
+              if (ei < ends.length) {
+                const e = ends[ei];
+                intervals.push({ base, startEv: s, endEv: e });
+                ei++; // consume that end so it's matched once
+              }
+            }
+          });
+          // --- station summary / counts (physical exams, lab orders, questions) ---
+          // physical exams are derived from instrument intervals (adjust list as needed)
+          const physicalInstrumentBases = new Set(["steto", "otoscope", "stick"]);
+          const physicalCount = intervals.filter(it => physicalInstrumentBases.has(it.base.toLowerCase())).length;
+          // lab orders heuristic: labels containing lab/laborat/pedido/order/solicit/hemograma/exame lab
+          const labRE = /lab|laborat|pedido|order|solicit|hemograma|exame\s*lab/i;
+          const labCount = parsed.events.filter(ev => labRE.test(ev.label)).length;
+          const questionCount = parsed.events.filter(ev => ev.type === "anamnesis").length;
+
+          // small helper to clamp values within 1..5 for the visual scale
+          const clampVal = (v) => {
+            v = Number.isFinite(v) ? Math.round(v) : 3;
+            if (v < 0) return 0;
+            if (v > 5) return 5;
+            return v;
+          };
+
+          // populate stationInfo area with simple rating controls (1-5) next to each metric
+          stationInfo.innerHTML = `
+            <div class="info-item">
+              <div class="label">Tempo de duração da estação</div>
+                <div class="value">${escapeHtml(parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's')}</div>
+              <div class="rating-row">
+                <label for="rating-duration">Avaliar:</label>
+                <select id="rating-duration" aria-label="Avaliar duração">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="3" id="scale-duration">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+<div class="scale-marker count-marker" style="left:${Math.min(100,(parsed.duration/600)*100)}%"><div class="label">${parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's'}</div></div>
+                              </div>
+              <div class="rating-hints">0-3min ruim · 3-8min aceitável · 8min+ ruim</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Exames físicos realizados</div>
+              <div class="value">${physicalCount}</div>
+              <div class="rating-row">
+                <label for="rating-phys">Avaliar:</label>
+                <select id="rating-phys" aria-label="Avaliar exames físicos">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(physicalCount)}" id="scale-phys">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(physicalCount)}</div></div>
+              </div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Exames laboratoriais pedidos</div>
+              <div class="value">${labCount}</div>
+              <div class="rating-row">
+                <label for="rating-lab">Avaliar:</label>
+                <select id="rating-lab" aria-label="Avaliar exames laboratoriais">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(labCount)}" id="scale-lab">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(labCount)}</div></div>
+              </div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Perguntas feitas na anamnese</div>
+              <div class="value">${questionCount}</div>
+              <div class="rating-row">
+                <label for="rating-qs">Avaliar:</label>
+                <select id="rating-qs" aria-label="Avaliar perguntas">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(questionCount)}" id="scale-qs">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(questionCount)}</div></div>
+              </div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item" id="overall-rating">
+              <div class="label">Média das avaliações</div>
+              <div class="value" id="avg-overall">—</div>
+            </div>
+          `;
+
+
+          // wire selects and compute marker positions
+          (  function initScales() {
+    function clamp(v, a=0, b=5){ v = Number(v)||0; if (v<a) return a; if (v>b) return b; return v; }
+    function setMarker(scaleEl, val) {
+      val = clamp(Math.round(val));
+      scaleEl.dataset.value = val;
+      const pct = (val / 5) * 100;
+      const marker = scaleEl.querySelector('.scale-marker');
+      if (marker) {
+        marker.style.left = pct + '%';
+        // keep the marker fully visible at the edges by changing its translate
+        if (pct <= 1) marker.style.transform = 'translate(0, -50%)';
+        else if (pct >= 99) marker.style.transform = 'translate(-100%, -50%)';
+        else marker.style.transform = 'translate(-50%, -50%)';        const lbl = marker.querySelector('.label');
+        if (lbl) lbl.textContent = val;
+      }
+    }
+
+            // set defaults from counts (clamped)
+            const phys = clampVal(physicalCount);
+            const lab = clampVal(labCount);
+            const qs = clampVal(questionCount);
+            const durDefault = 3;
+            const sDur = document.getElementById('scale-duration');
+            const sPhys = document.getElementById('scale-phys');
+            const sLab = document.getElementById('scale-lab');
+            const sQs = document.getElementById('scale-qs');
+
+            const selDur = document.getElementById('rating-duration');
+            const selPhys = document.getElementById('rating-phys');
+            const selLab = document.getElementById('rating-lab');
+            const selQs = document.getElementById('rating-qs');
+
+            if (selDur) selDur.value = durDefault;
+            if (selPhys) selPhys.value = phys;
+            if (selLab) selLab.value = lab;
+            if (selQs) selQs.value = qs;
+
+            if (sDur) setMarker(sDur, selDur ? selDur.value : durDefault);
+            if (sDur) {
+              const pctDur = Math.min(100, (parsed.duration / 600) * 100); // parsed.duration em segundos, escala 0..600s (0..10min)
+              const countMarker = sDur.querySelector('.count-marker');
+              if (countMarker) {
+                countMarker.style.left = pctDur + '%';
+                const lbl = countMarker.querySelector('.label');
+if (lbl) lbl.textContent = (parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's');              }
+            }            if (sPhys) setMarker(sPhys, phys);
+            if (sLab) setMarker(sLab, lab);
+            if (sQs) setMarker(sQs, qs);
+
+            // update when selects change (reliable wiring)
+            if (selDur) selDur.addEventListener('change', () => computeOverallAverage());
+            if (selPhys) selPhys.addEventListener('change', () => computeOverallAverage());
+            if (selLab) selLab.addEventListener('change', () => computeOverallAverage());
+            if (selQs) selQs.addEventListener('change', () => computeOverallAverage());
+
+            function computeOverallAverage(){
+              const parts = [selDur, selPhys, selLab, selQs];
+              const vals = parts.map(s => Number(s && s.value ? s.value : 0));
+              const avg = vals.reduce((a,b) => a + b, 0) / vals.length;
+              const el = document.getElementById('avg-overall');
+              if (el) el.textContent = Number.isFinite(avg) ? avg.toFixed(2) : '—';
+            }
+            // ensure initial value
+            computeOverallAverage();
+          })();
+
+          // draw interval bars first (under markers)
+          intervals.forEach((it) => {
+            const left = it.startEv.percent;
+            const right = it.endEv.percent;
+            const width = Math.max(0.2, right - left);
+            const div = document.createElement("div");
+            div.className = "interval";
+            div.style.left = `${left}%`;
+            div.style.width = `${width}%`;
+
+            // per-base styling: station -> thin black, steto -> thick yellow, default -> hashed color
+            const baseLower = it.base.toLowerCase();
+            const instrumentNames = {
+              steto: "Stethoscope Exam",
+              otoscope: "Otoscope Exam",
+              stick: "Throat Exam"
+            };
+            if (baseLower === "station") {
+              div.style.background = "#000";
+              div.style.height = "8px"; // thinner
+              div.style.opacity = "0.25";
+              div.style.top = "21px";
+            } else if (baseLower === "steto" || baseLower === "otoscope" || baseLower === "stick") {
+              div.style.background = "rgba(44,44,255,0.75)";
+              div.style.boxShadow = "0 0 6px rgba(44,44,255,0.95)";
+              div.style.height = "32px"; // thicker
+              div.style.top = "10px";
+              // create tooltip element showing the instrument name
+
+              const label = instrumentNames[baseLower] || (it.base.charAt(0).toUpperCase() + it.base.slice(1));
+
+              // compute duration between start and end (seconds), format to 1 decimal
+              let durationText = "";
+              if (it.endEv && typeof it.endEv.original === "number" && typeof it.startEv.original === "number") {
+                const dur = it.endEv.original - it.startEv.original;
+                if (!isNaN(dur)) durationText = `${dur.toFixed(1)}s`;
+              }
+
+              // collect alerts that occur at the same original time as the start event
+              const EPS = 1e-4;
+              const sameTimeAlerts = parsed.events
+                .filter(ev => ev.type === 'alert' && Math.abs(ev.original - it.startEv.original) < EPS)
+                .map(ev => ev.label)
+                .filter(Boolean);
+
+              const tip = document.createElement("div");
+              tip.className = "interval-tooltip";
+
+              // instrument label + optional duration on first line
+              let html = `<div class="instrument-label">${escapeHtml(label)}${durationText ? `: ${escapeHtml(durationText)}` : ''}</div>`;
+
+              if (sameTimeAlerts.length > 0) {
+                html += sameTimeAlerts.map(a => `<div class="alert-line">${escapeHtml(a)}</div>`).join('');
+              }
+              tip.innerHTML = html;
+              div.appendChild(tip);
+              // compute number of alert-type events that fall inside this interval (inclusive)
+              const EPSs = 1e-6;
+              const warnCount = parsed.events.filter(ev =>
+                ev.type === 'alert' &&
+                ev.original + EPSs >= it.startEv.original &&
+                ev.original - EPSs <= it.endEv.original
+              ).length;
+
+              if (warnCount > 0) {
+                const badge = document.createElement('div');
+                badge.className = 'warning-badge';
+                badge.textContent = String(warnCount);
+                // reduce font for large counts
+                if (warnCount > 9) badge.style.fontSize = '11px';
+                div.appendChild(badge);
+              }
+            } else {
+              div.style.background = colorForIdBase(it.base);
+            }
+
+            timelineBar.appendChild(div);
+          });
+
+
+          // create sections for types
+          const startSection = document.createElement("div");
+          startSection.className = "section";
+          startSection.innerHTML =
+            '<div class="section-head"><span class="badge start"></span> Inícios (_start)</div>';
+          const endSection = document.createElement("div");
+          endSection.className = "section";
+          endSection.innerHTML =
+            '<div class="section-head"><span class="badge end"></span> Fins (_end)</div>';
+          const anamSection = document.createElement("div");
+          anamSection.className = "section";
+          anamSection.innerHTML =
+            '<div class="section-head"><span class="badge anamnesis"></span> Anamneses</div>';
+          const alertSection = document.createElement("div");
+          alertSection.className = "section";
+          alertSection.innerHTML =
+            '<div class="section-head"><span class="badge alert"></span> Alertas / outros</div>';
+
+          const startList = document.createElement("div");
+          const endList = document.createElement("div");
+          const anamList = document.createElement("div");
+          const alertList = document.createElement("div");
+
+          // counters to assign stacking index per percent key
+          const assigned = {};
+
+          parsed.events.forEach((ev) => {
+            // stacking index for same position
+            const key = ev.percent.toFixed(3);
+            const idx = assigned[key] || 0;
+            assigned[key] = idx + 1;
+
+            // marker on timeline
+
+            const marker = document.createElement("div");
+            // build classes conditionally so glovesScript_start does NOT get "type-start"
+            const markerClasses = ["marker"];
+            // compute the base name (without _start/_end) and use it here
+            const baseStart = ev.label.replace(/(_start|_end)$/i, "").toLowerCase();
+            if (baseStart === "glovesscript") {
+              markerClasses.push("type-hygiene");
+            }
+            // only add the generic type-* when it's not glovesScript_start (or glovesScript_end if you want)
+            if (!(baseStart === "glovesscript" && ev.type === "start")) {
+              markerClasses.push("type-" + ev.type);
+            }
+            marker.className = markerClasses.join(" ");
+            marker.style.left = ev.percent + "%";
+
+// per-label marker appearance (match intervals): thin black for station, thick/yellow for steto
+            const labelBase = ev.label.replace(/(_start|_end)$/i, "").toLowerCase();
+            if (labelBase === "station") {
+              marker.style.width = "1px";
+              marker.style.background = "#000";
+            } 
+            // compute display label (allows replacing glovesScript_* with "Put Gloves")
+            let displayLabel = ev.label;
+            if (displayLabel === "glovesScript_start") {
+              displayLabel = "Put Gloves (hygiene)";
+              marker.classList.add("type-hygiene");
+            }
+
+
+
+            // stagger vertically to avoid overlap
+            const topBase = 6; // original top
+            const stackOffset = 10; // px per stacked item
+            const topPx = topBase + idx * stackOffset;
+            marker.style.top = topPx + "px";
+
+            // reduce height slightly for deeper stacks to keep markers inside bar
+            const defaultHeight = 36;
+            const reducedHeight = Math.max(14, defaultHeight - idx * 4);
+            marker.style.height = reducedHeight + "px";
+
+            // dot + tooltip
+            const dot = document.createElement("div");
+            dot.className = "dot";
+            marker.appendChild(dot);
+// dot color override to match marker when customized
+            if (labelBase === "station") {
+              dot.style.background = "#000";
+              dot.style.boxShadow = "0 0 6px rgba(0,0,0,0.25)";
+            } 
+
+            const tip = document.createElement("div");
+            tip.className = "tooltip";
+            tip.textContent = displayLabel;
+            // tip.textContent =
+            //   ev.label +
+            //   " — " +
+            //   ev.normalized.toFixed(3) +
+            //   " s (orig: " +
+            //   ev.original.toFixed(3) +
+            //   " s) • type: " +
+            //   ev.type;
+            marker.appendChild(tip);
+            timelineBar.appendChild(marker);
+
+            // ajuste do balão para não sair da tela
+            marker.addEventListener("mouseenter", () => {
+              // forçar exibição para medir
+              tip.style.display = "block";
+              requestAnimationFrame(() => {
+                const tipRect = tip.getBoundingClientRect();
+                const vw = window.innerWidth;
+                const margin = 8; // margem mínima da borda da janela
+                let dx = 0;
+                if (tipRect.left < margin) dx = margin - tipRect.left;
+                else if (tipRect.right > vw - margin)
+                  dx = vw - margin - tipRect.right;
+                if (dx !== 0) {
+                  // desloca horizontalmente usando calc sobre o translate existente
+                  tip.style.transform = `translate(calc(-50% + ${dx}px), -140%)`;
+                } else {
+                  tip.style.transform = "translate(-50%, -140%)";
+                }
+              });
+            });
+            marker.addEventListener("mouseleave", () => {
+              // limpa alterações para voltar ao comportamento CSS padrão
+              tip.style.transform = "";
+              tip.style.display = "";
+            });
+
+            // event row
+            const row = document.createElement("div");
+            row.className = "event-row";
+            const timeCol = document.createElement("div");
+            timeCol.className = "time";
+            timeCol.textContent = ev.normalized.toFixed(3) + " s";
+            const labelCol = document.createElement("div");
+            labelCol.className = "label";
+            labelCol.textContent = displayLabel;
+
+            const origCol = document.createElement("div");
+            origCol.className = "small";
+            origCol.textContent = "orig: " + ev.original.toFixed(3) + " s";
+            row.appendChild(timeCol);
+            row.appendChild(labelCol);
+            row.appendChild(origCol);
+
+            if (ev.type === "start") startList.appendChild(row);
+            else if (ev.type === "end") endList.appendChild(row);
+            else if (ev.type === "anamnesis") anamList.appendChild(row);
+
+            else alertList.appendChild(row);
+          });
+
+          startSection.appendChild(startList);
+          endSection.appendChild(endList);
+          anamSection.appendChild(anamList);
+          alertSection.appendChild(alertList);
+
+          eventsList.appendChild(startSection);
+          eventsList.appendChild(endSection);
+          eventsList.appendChild(anamSection);
+          eventsList.appendChild(alertSection);
+
+          summary.textContent = `Eventos: ${
+            parsed.events.length
+          } • início(original): ${parsed.minT.toFixed(
+            3
+          )} s • fim(original): ${parsed.maxT.toFixed(
+            3
+          )} s • duração(normalizada): ${parsed.duration.toFixed(3)} s`;
+        }
+
+        parseBtn.addEventListener("click", () => {
+          const text = input.value || "";
+          const parsed = parseText(text);
+          render(parsed);
+          // save last parsed to export buttons
+          window.__lastParsed = parsed;
+        });
+
+        fileInput.addEventListener("change", (e) => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            input.value = ev.target.result;
+            parseBtn.click();
+          };
+          reader.readAsText(f, "utf-8");
+        });
+
+        exportJson.addEventListener("click", () => {
+          const parsed = window.__lastParsed;
+          if (!parsed) {
+            alert("Nada para exportar. Parseie primeiro.");
+            return;
+          }
+          const blob = new Blob([JSON.stringify(parsed, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "timeline.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+
+        exportCsv.addEventListener("click", () => {
+          const parsed = window.__lastParsed;
+          if (!parsed) {
+            alert("Nada para exportar. Parseie primeiro.");
+            return;
+          }
+          const rows = [["label", "original_time", "normalized_time", "type"]];
+          parsed.events.forEach((ev) =>
+            rows.push([ev.label, ev.original, ev.normalized, ev.type])
+          );
+          const csv = rows
+            .map((r) =>
+              r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(",")
+            )
+            .join("\r\n");
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "timeline.csv";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+
+        // auto-parse initial content
+        parseBtn.click();
+      })();
+    </script>
+  </body>
+</html>
