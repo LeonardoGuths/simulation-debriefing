@@ -32,6 +32,91 @@
         padding: 12px;
         border-radius: 6px;
       }
+      
+     .station-info {
+       display: flex;
+       gap: 12px;
+       flex-wrap: wrap;
+       margin-bottom: 12px;
+       align-items: center;
+     }
+     .info-item {
+       background: #fff;
+       border: 1px solid #eee;
+       padding: 8px 10px;
+       border-radius: 6px;
+       min-width: 180px;
+       display: flex;
+       flex-direction: column;
+       gap: 6px;
+     }
+     .info-item .label { font-weight:700; }
+     .info-item .value { font-family: monospace; color:#333;
+       font-size: 16px;  }
+     .rating-row { display:flex; gap:8px; align-items:center; }
+     .rating-row select { padding:4px 6px; border-radius:4px; }
+     .rating-hints { font-size:12px; color:#666; margin-top:4px; }
+
+         /* colored scale + marker */
+     .rating-scale {
+       position: relative;
+       height: 14px;
+       border-radius: 8px;
+       overflow: hidden;
+       margin-top: 16px;
+       background: linear-gradient(90deg, #f8f8f8, #f8f8f8);
+       border: 1px solid #eee;
+      overflow: visible;
+      /* padding: 0 8px; */
+     }
+     .rating-scale .seg { height: 100%; float: left; }
+     /* segments widths map to numeric scale 1..5:
+        1-2 -> poor (40%), 3-4 -> acceptable (40%), 5 -> good (20%) */
+     .rating-scale .seg.poor { width: 40%; background: linear-gradient(90deg,#e74c3c,#ff6b6b); }
+     .rating-scale .seg.ok { width: 40%; background: linear-gradient(90deg,#f1c40f,#ffd966); }
+     .rating-scale .seg.good { width: 20%; background: linear-gradient(90deg,#2ecc71,#60d68b); }
+     .scale-marker {
+       position: absolute;
+       top: 50%;
+       transform: translate(-50%,-50%);
+       width: 2px;
+       height: 20px;
+       background: #222;
+       box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+       border-radius: 1px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+     }
+     #scale-duration {
+  /* five-color band: red -> yellow -> green -> yellow -> red */
+  background: linear-gradient(
+    90deg,
+    #e74c3c 0%,
+    #f1c40f 20%,
+    #2ecc71 50%,
+    #f1c40f 80%,
+    #e74c3c 100%
+  );
+}
+#scale-duration .seg { display: none; }
+    .scale-marker.user-marker {
+      background: #0b66ff;
+      width: 4px;
+    }
+     .scale-marker .label {
+       position: absolute;
+       top: -22px;
+       left: 50%;
+       transform: translateX(-50%);
+       font-size: 12px;
+       background: #fff;
+       padding: 2px 6px;
+       border-radius: 6px;
+       border: 1px solid #eee;
+       white-space: nowrap;
+     }
+
       .timeline {
         position: relative;
         min-height: 48px;
@@ -305,6 +390,9 @@ observation: 119.0633, station_end
 
 
     <div class="timeline-wrap" id="output" style="display: none">
+      <div id="stationInfo" class="station-info" aria-live="polite">
+        <!-- preenchido dinamicamente: tempo normalizado, qtd exames fisicos, exames laboratoriais, perguntas + escalas -->
+      </div>
       <div class="timeline" id="timelineBar"></div>
       <button id="toggleIntervalsBtn" type="button" aria-pressed="false" style="display:block; padding:6px 10px; margin: 0.5rem auto;"></button>
         
@@ -319,6 +407,7 @@ observation: 119.0633, station_end
         const fileInput = document.getElementById("fileInput");
         const timelineWrap = document.getElementById("output");
         const timelineBar = document.getElementById("timelineBar");
+        const stationInfo = document.getElementById("stationInfo");
         const eventsList = document.getElementById("eventsList");
         const summary = document.getElementById("summary");
         const exportJson = document.getElementById("exportJson");
@@ -448,6 +537,8 @@ observation: 119.0633, station_end
           timelineWrap.style.display = "block";
           timelineBar.innerHTML = "";
           eventsList.innerHTML = "";
+          stationInfo.innerHTML = ""; // limpar área de resumo antes de popular
+
 
           // compute stacking counts for same-percent events (avoid float issues by rounding)
           const countMap = {};
@@ -503,6 +594,158 @@ observation: 119.0633, station_end
               }
             }
           });
+          // --- station summary / counts (physical exams, lab orders, questions) ---
+          // physical exams are derived from instrument intervals (adjust list as needed)
+          const physicalInstrumentBases = new Set(["steto", "otoscope", "stick"]);
+          const physicalCount = intervals.filter(it => physicalInstrumentBases.has(it.base.toLowerCase())).length;
+          // lab orders heuristic: labels containing lab/laborat/pedido/order/solicit/hemograma/exame lab
+          const labRE = /lab|laborat|pedido|order|solicit|hemograma|exame\s*lab/i;
+          const labCount = parsed.events.filter(ev => labRE.test(ev.label)).length;
+          const questionCount = parsed.events.filter(ev => ev.type === "anamnesis").length;
+
+          // small helper to clamp values within 1..5 for the visual scale
+          const clampVal = (v) => {
+            v = Number.isFinite(v) ? Math.round(v) : 3;
+            if (v < 0) return 0;
+            if (v > 5) return 5;
+            return v;
+          };
+
+          // populate stationInfo area with simple rating controls (1-5) next to each metric
+          stationInfo.innerHTML = `
+            <div class="info-item">
+              <div class="label">Tempo de duração da estação</div>
+                <div class="value">${escapeHtml(parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's')}</div>
+              <div class="rating-row">
+                <label for="rating-duration">Avaliar:</label>
+                <select id="rating-duration" aria-label="Avaliar duração">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="3" id="scale-duration">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+<div class="scale-marker count-marker" style="left:${Math.min(100,(parsed.duration/600)*100)}%"><div class="label">${parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's'}</div></div>
+                              </div>
+              <div class="rating-hints">0-3min ruim · 3-8min aceitável · 8min+ ruim</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Exames físicos realizados</div>
+              <div class="value">${physicalCount}</div>
+              <div class="rating-row">
+                <label for="rating-phys">Avaliar:</label>
+                <select id="rating-phys" aria-label="Avaliar exames físicos">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(physicalCount)}" id="scale-phys">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(physicalCount)}</div></div>
+              </div>
+              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Exames laboratoriais pedidos</div>
+              <div class="value">${labCount}</div>
+              <div class="rating-row">
+                <label for="rating-lab">Avaliar:</label>
+                <select id="rating-lab" aria-label="Avaliar exames laboratoriais">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(labCount)}" id="scale-lab">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(labCount)}</div></div>
+              </div>
+              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item">
+              <div class="label">Perguntas feitas na anamnese</div>
+              <div class="value">${questionCount}</div>
+              <div class="rating-row">
+                <label for="rating-qs">Avaliar:</label>
+                <select id="rating-qs" aria-label="Avaliar perguntas">
+                  <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </div>
+              <div class="rating-scale" data-value="${clampVal(questionCount)}" id="scale-qs">
+                <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
+                <div class="scale-marker" style="left:0%"><div class="label">${clampVal(questionCount)}</div></div>
+              </div>
+              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+            </div>
+            <div class="info-item" id="overall-rating">
+              <div class="label">Média das avaliações</div>
+              <div class="value" id="avg-overall">—</div>
+            </div>
+          `;
+
+
+          // wire selects and compute marker positions
+          (  function initScales() {
+    function clamp(v, a=0, b=5){ v = Number(v)||0; if (v<a) return a; if (v>b) return b; return v; }
+    function setMarker(scaleEl, val) {
+      val = clamp(Math.round(val));
+      scaleEl.dataset.value = val;
+      const pct = (val / 5) * 100;
+      const marker = scaleEl.querySelector('.scale-marker');
+      if (marker) {
+        marker.style.left = pct + '%';
+        // keep the marker fully visible at the edges by changing its translate
+        if (pct <= 1) marker.style.transform = 'translate(0, -50%)';
+        else if (pct >= 99) marker.style.transform = 'translate(-100%, -50%)';
+        else marker.style.transform = 'translate(-50%, -50%)';        const lbl = marker.querySelector('.label');
+        if (lbl) lbl.textContent = val;
+      }
+    }
+
+            // set defaults from counts (clamped)
+            const phys = clampVal(physicalCount);
+            const lab = clampVal(labCount);
+            const qs = clampVal(questionCount);
+            const durDefault = 3;
+            const sDur = document.getElementById('scale-duration');
+            const sPhys = document.getElementById('scale-phys');
+            const sLab = document.getElementById('scale-lab');
+            const sQs = document.getElementById('scale-qs');
+
+            const selDur = document.getElementById('rating-duration');
+            const selPhys = document.getElementById('rating-phys');
+            const selLab = document.getElementById('rating-lab');
+            const selQs = document.getElementById('rating-qs');
+
+            if (selDur) selDur.value = durDefault;
+            if (selPhys) selPhys.value = phys;
+            if (selLab) selLab.value = lab;
+            if (selQs) selQs.value = qs;
+
+            if (sDur) setMarker(sDur, selDur ? selDur.value : durDefault);
+            if (sDur) {
+              const pctDur = Math.min(100, (parsed.duration / 600) * 100); // parsed.duration em segundos, escala 0..600s (0..10min)
+              const countMarker = sDur.querySelector('.count-marker');
+              if (countMarker) {
+                countMarker.style.left = pctDur + '%';
+                const lbl = countMarker.querySelector('.label');
+if (lbl) lbl.textContent = (parsed.duration >= 60 ? Math.floor(parsed.duration/60) + 'm' + Math.round(parsed.duration % 60) + 's' : Math.round(parsed.duration) + 's');              }
+            }            if (sPhys) setMarker(sPhys, phys);
+            if (sLab) setMarker(sLab, lab);
+            if (sQs) setMarker(sQs, qs);
+
+            // update when selects change (reliable wiring)
+            if (selDur) selDur.addEventListener('change', () => computeOverallAverage());
+            if (selPhys) selPhys.addEventListener('change', () => computeOverallAverage());
+            if (selLab) selLab.addEventListener('change', () => computeOverallAverage());
+            if (selQs) selQs.addEventListener('change', () => computeOverallAverage());
+
+            function computeOverallAverage(){
+              const parts = [selDur, selPhys, selLab, selQs];
+              const vals = parts.map(s => Number(s && s.value ? s.value : 0));
+              const avg = vals.reduce((a,b) => a + b, 0) / vals.length;
+              const el = document.getElementById('avg-overall');
+              if (el) el.textContent = Number.isFinite(avg) ? avg.toFixed(2) : '—';
+            }
+            // ensure initial value
+            computeOverallAverage();
+          })();
 
           // draw interval bars first (under markers)
           intervals.forEach((it) => {
