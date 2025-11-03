@@ -61,7 +61,7 @@
      .rating-scale {
        position: relative;
        height: 14px;
-       border-radius: 8px;
+       /* border-radius: 8px; */
        overflow: hidden;
        margin-top: 16px;
        background: linear-gradient(90deg, #f8f8f8, #f8f8f8);
@@ -72,9 +72,9 @@
      .rating-scale .seg { height: 100%; float: left; }
      /* segments widths map to numeric scale 1..5:
         1-2 -> poor (40%), 3-4 -> acceptable (40%), 5 -> good (20%) */
-     .rating-scale .seg.poor { width: 40%; background: linear-gradient(90deg,#e74c3c,#ff6b6b); }
-     .rating-scale .seg.ok { width: 40%; background: linear-gradient(90deg,#f1c40f,#ffd966); }
-     .rating-scale .seg.good { width: 20%; background: linear-gradient(90deg,#2ecc71,#60d68b); }
+     .rating-scale .seg.poor { width: 45%; background: linear-gradient(90deg,#e74c3c,#ff8248); }
+     .rating-scale .seg.ok { width: 40%; background: linear-gradient(90deg,#f1b50f,#ffd966); }
+     .rating-scale .seg.good { width: 15%; background: linear-gradient(90deg,#2ecc71,#60d68b); }
      .scale-marker {
        position: absolute;
        top: 50%;
@@ -641,7 +641,7 @@ observation: 119.0633, station_end
                 <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
                 <div class="scale-marker" style="left:0%"><div class="label">${clampVal(physicalCount)}</div></div>
               </div>
-              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
             </div>
             <div class="info-item">
               <div class="label">Exames laboratoriais pedidos</div>
@@ -656,7 +656,7 @@ observation: 119.0633, station_end
                 <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
                 <div class="scale-marker" style="left:0%"><div class="label">${clampVal(labCount)}</div></div>
               </div>
-              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
             </div>
             <div class="info-item">
               <div class="label">Perguntas feitas na anamnese</div>
@@ -671,7 +671,7 @@ observation: 119.0633, station_end
                 <div class="seg poor"></div><div class="seg ok"></div><div class="seg good"></div>
                 <div class="scale-marker" style="left:0%"><div class="label">${clampVal(questionCount)}</div></div>
               </div>
-              <div class="rating-hints">1-2 ruim · 3-4 aceitável · 5+ bom</div>
+              <div class="rating-hints">0-2 ruim · 3-4 aceitável · 5+ bom</div>
             </div>
             <div class="info-item" id="overall-rating">
               <div class="label">Média das avaliações</div>
