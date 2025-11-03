@@ -1697,9 +1697,13 @@ observation: 119.0633, station_end</textarea
           const alertList = document.createElement("div");
 
           // Add intervals to the procedure section (only medical procedures, not station)
-          intervals.forEach((it) => {
+          // Sort intervals by start time
+          const sortedIntervals = intervals
+            .filter((it) => it.base.toLowerCase() !== "station")
+            .sort((a, b) => a.startEv.original - b.startEv.original);
+
+          sortedIntervals.forEach((it) => {
             const baseLower = it.base.toLowerCase();
-            if (baseLower === "station") return; // Skip station intervals
 
             const instrumentNames = {
               steto: "Stethoscope Exam",
