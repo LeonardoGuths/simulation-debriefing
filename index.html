@@ -67,6 +67,73 @@
         box-shadow: var(--shadow-sm);
         position: relative;
         z-index: 10;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header-content {
+        flex: 1;
+      }
+
+      .language-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: var(--transition);
+      }
+
+      .language-selector:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      .language-selector label {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+      }
+
+      .language-selector select {
+        padding: 0.375rem 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 0.8rem;
+        min-width: 100px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .language-selector select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        background: white;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2),
+          0 2px 8px rgba(0, 0, 0, 0.15);
+        transform: scale(1.02);
+      }
+
+      .language-selector select:hover {
+        background: white;
+        border-color: rgba(255, 255, 255, 0.5);
       }
 
       .header h1 {
@@ -208,12 +275,8 @@
         gap: 0.5rem;
       }
 
-      .metric-card .value {
-        font-family: "Inter", monospace;
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-bottom: 1rem;
+      .metric-card#overall-rating {
+        grid-column: 1 / -1;
       }
 
       .rating-row {
@@ -253,7 +316,7 @@
         /* border-radius: 6px; */
         overflow: visible;
         margin-bottom: 0.75rem;
-        margin-top: 0.75rem;
+        margin-top: 2.5rem;
         background: linear-gradient(90deg, #fee2e2, #fef3c7, #d1fae5);
         border: 1px solid var(--border-color);
         box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -786,6 +849,21 @@
           font-size: 2rem;
         }
 
+        .language-selector {
+          margin-right: 1rem;
+          padding: 0.4rem 0.8rem;
+        }
+
+        .language-selector label {
+          font-size: 0.8rem;
+        }
+
+        .language-selector select {
+          font-size: 0.75rem;
+          min-width: 90px;
+          padding: 0.3rem 0.6rem;
+        }
+
         .metrics-grid {
           grid-template-columns: 1fr;
         }
@@ -992,13 +1070,24 @@
   <body>
     <div class="app-container">
       <header class="header">
-        <h1>
-          <i class="fas fa-stethoscope"></i> Simulation Debriefing Analyzer
-        </h1>
-        <p class="subtitle">
-          Professional analysis tool for medical simulation performance
-          evaluation
-        </p>
+        <div class="header-content">
+          <h1>
+            <i class="fas fa-stethoscope"></i> Simulation Debriefing Analyzer
+          </h1>
+          <p class="subtitle">
+            Professional analysis tool for medical simulation performance
+            evaluation
+          </p>
+        </div>
+        <div class="language-selector">
+          <label for="language-select"
+            ><i class="fas fa-globe"></i> Language:</label
+          >
+          <select id="language-select">
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+          </select>
+        </div>
       </header>
 
       <div class="main-content">
@@ -1044,12 +1133,17 @@ observation: 119.0633, station_end</textarea
 
           <div class="sidebar-section">
             <h3><i class="fas fa-download"></i> Export</h3>
-            <button id="exportJson" class="btn-secondary">
-              <i class="fas fa-file-code"></i> JSON
-            </button>
-            <button id="exportCsv" class="btn-secondary">
-              <i class="fas fa-file-csv"></i> CSV
-            </button>
+            <div
+              class="export-buttons"
+              style="display: flex; flex-direction: row; gap: 0.5rem"
+            >
+              <button id="exportJson" class="btn-secondary">
+                <i class="fas fa-file-code"></i> JSON
+              </button>
+              <button id="exportCsv" class="btn-secondary">
+                <i class="fas fa-file-csv"></i> CSV
+              </button>
+            </div>
           </div>
 
           <div class="sidebar-section">
@@ -1112,6 +1206,388 @@ observation: 119.0633, station_end</textarea
     </div>
 
     <script>
+      // Translation system
+      const translations = {
+        en: {
+          // Header
+          title: "Simulation Debriefing Analyzer",
+          subtitle:
+            "Professional analysis tool for medical simulation performance evaluation",
+          languageLabel: "Language:",
+
+          // Sidebar sections
+          metaHealth: "MetaHealth",
+          dataInput: "Data Input",
+          export: "Export",
+          summary: "Summary",
+
+          // Buttons and controls
+          analyzeData: "Analyze Data",
+          json: "JSON",
+          csv: "CSV",
+          showDetails: "Show Details",
+          hideDetails: "Hide Details",
+          sendRating: "Send Rating and End Evaluation",
+
+          // Main sections
+          performanceMetrics: "Performance Metrics",
+          procedureTimeline: "Procedure Timeline",
+          eventLog: "Event Log",
+
+          // Metric labels
+          stationDuration: "Station Duration",
+          physicalExams: "Physical Exams",
+          labOrders: "Lab Orders",
+          patientQuestions: "Patient Questions",
+          overallRating: "Overall Rating",
+          ratePerformance: "Rate performance:",
+
+          // Rating hints
+          durationHint: "0-3min: Poor • 3-8min: Acceptable • 8min+: Poor",
+          defaultHint: "0-2: Poor • 3-4: Acceptable • 5+: Good",
+
+          // Event sections
+          procedureIntervals: "Procedure Intervals",
+          patientQuestionsSection: "Patient Questions",
+          alertsEvents: "Alerts & Events",
+          otherProcedures: "Other Procedures",
+
+          // Modal content
+          evaluationComplete: "Evaluation Complete",
+          overallRatingLabel: "Overall Rating:",
+          thankYouMessage:
+            "Thank you for completing this simulation debriefing. Your feedback helps improve medical training outcomes.",
+          close: "Close",
+
+          // Status messages
+          noEventsFound: "No events found.",
+          eventsSummary:
+            "Events: {count} • Start time: {start}s • End time: {end}s • Duration: {duration}s",
+
+          // Tooltips and labels
+          stethoscopeExam: "Stethoscope Exam",
+          otoscopeExam: "Otoscope Exam",
+          throatExam: "Throat Exam",
+          stationSession: "Station Session",
+          putGloves: "Put Gloves",
+          elapsed: "elapsed",
+        },
+        pt: {
+          // Header
+          title: "Analisador de Debriefing de Simulação",
+          subtitle:
+            "Ferramenta profissional de análise para avaliação de desempenho em simulações médicas",
+          languageLabel: "Idioma:",
+
+          // Sidebar sections
+          metaHealth: "MetaHealth",
+          dataInput: "Entrada de Dados",
+          export: "Exportar",
+          summary: "Resumo",
+
+          // Buttons and controls
+          analyzeData: "Analisar Dados",
+          json: "JSON",
+          csv: "CSV",
+          showDetails: "Mostrar Detalhes",
+          hideDetails: "Ocultar Detalhes",
+          sendRating: "Enviar Avaliação e Finalizar",
+
+          // Main sections
+          performanceMetrics: "Métricas de Desempenho",
+          procedureTimeline: "Linha do Tempo de Procedimentos",
+          eventLog: "Registro de Eventos",
+
+          // Metric labels
+          stationDuration: "Duração da Estação",
+          physicalExams: "Exames Físicos",
+          labOrders: "Pedidos de Laboratório",
+          patientQuestions: "Perguntas ao Paciente",
+          overallRating: "Avaliação Geral",
+          ratePerformance: "Avaliar desempenho:",
+
+          // Rating hints
+          durationHint: "0-3min: Ruim • 3-8min: Aceitável • 8min+: Ruim",
+          defaultHint: "0-2: Ruim • 3-4: Aceitável • 5+: Bom",
+
+          // Event sections
+          procedureIntervals: "Intervalos de Procedimentos",
+          patientQuestionsSection: "Perguntas ao Paciente",
+          alertsEvents: "Alertas e Eventos",
+          otherProcedures: "Outros Procedimentos",
+
+          // Modal content
+          evaluationComplete: "Avaliação Concluída",
+          overallRatingLabel: "Avaliação Geral:",
+          thankYouMessage:
+            "Obrigado por completar este debriefing de simulação. Seu feedback ajuda a melhorar os resultados do treinamento médico.",
+          close: "Fechar",
+
+          // Status messages
+          noEventsFound: "Nenhum evento encontrado.",
+          eventsSummary:
+            "Eventos: {count} • Tempo inicial: {start}s • Tempo final: {end}s • Duração: {duration}s",
+
+          // Tooltips and labels
+          stethoscopeExam: "Exame com Estetoscópio",
+          otoscopeExam: "Exame com Otoscópio",
+          throatExam: "Exame de Garganta",
+          stationSession: "Sessão da Estação",
+          putGloves: "Colocar Luvas",
+          elapsed: "decorrido",
+        },
+      };
+
+      // Current language
+      let currentLanguage = localStorage.getItem("language") || "en";
+
+      // Translation function
+      function t(key, params = {}) {
+        const text =
+          translations[currentLanguage][key] || translations.en[key] || key;
+        return text.replace(
+          /{(\w+)}/g,
+          (match, param) => params[param] || match
+        );
+      }
+
+      // Update all text content
+      function updateLanguage() {
+        // Header
+        document.querySelector(
+          ".header h1"
+        ).innerHTML = `<i class="fas fa-stethoscope"></i> ${t("title")}`;
+        document.querySelector(".header .subtitle").textContent = t("subtitle");
+        document.querySelector(
+          ".language-selector label"
+        ).innerHTML = `<i class="fas fa-globe"></i> ${t("languageLabel")}`;
+
+        // Sidebar sections
+        const sidebarSections = document.querySelectorAll(
+          ".sidebar-section h3"
+        );
+        sidebarSections.forEach((h3) => {
+          const icon = h3.querySelector("i");
+          const iconHtml = icon ? icon.outerHTML + " " : "";
+          if (h3.textContent.includes("Data Input")) {
+            h3.innerHTML = iconHtml + t("dataInput");
+          } else if (h3.textContent.includes("Export")) {
+            h3.innerHTML = iconHtml + t("export");
+          } else if (h3.textContent.includes("Summary")) {
+            h3.innerHTML = iconHtml + t("summary");
+          }
+        });
+
+        // Buttons
+        const parseBtn = document.getElementById("parseBtn");
+        if (parseBtn) {
+          parseBtn.innerHTML = `<i class="fas fa-play"></i> ${t(
+            "analyzeData"
+          )}`;
+        }
+
+        const exportJson = document.getElementById("exportJson");
+        if (exportJson) {
+          exportJson.innerHTML = `<i class="fas fa-file-code"></i> ${t(
+            "json"
+          )}`;
+        }
+
+        const exportCsv = document.getElementById("exportCsv");
+        if (exportCsv) {
+          exportCsv.innerHTML = `<i class="fas fa-file-csv"></i> ${t("csv")}`;
+        }
+
+        // Update toggle button text if it exists
+        const toggleBtn = document.getElementById("toggleIntervalsBtn");
+        if (toggleBtn) {
+          const isOn = document.body.classList.contains(
+            "show-interval-tooltips"
+          );
+          toggleBtn.innerHTML = `<i class="fas fa-eye"></i> ${
+            isOn ? t("hideDetails") : t("showDetails")
+          }`;
+        }
+
+        // Update main content sections if they exist
+        const dashboardH2 = document.querySelector(".dashboard h2");
+        if (dashboardH2) {
+          dashboardH2.innerHTML = `<i class="fas fa-chart-bar"></i> ${t(
+            "performanceMetrics"
+          )}`;
+        }
+
+        const timelineH2 = document.querySelector(".timeline-section h2");
+        if (timelineH2) {
+          timelineH2.innerHTML = `<i class="fas fa-timeline"></i> ${t(
+            "procedureTimeline"
+          )}`;
+        }
+
+        const eventsH2 = document.querySelector(".events-section h2");
+        if (eventsH2) {
+          eventsH2.innerHTML = `<i class="fas fa-list-check"></i> ${t(
+            "eventLog"
+          )}`;
+        }
+
+        // Update metric cards if they exist
+        updateMetricCards();
+
+        // Update event sections if they exist
+        updateEventSections();
+
+        // Update modal if it exists
+        updateModal();
+
+        // Update summary if it exists
+        updateSummary();
+      }
+
+      function updateMetricCards() {
+        const metricCards = document.querySelectorAll(".metric-card .label");
+        metricCards.forEach((label) => {
+          const text = label.textContent.trim();
+          if (text.includes("Station Duration")) {
+            label.innerHTML = `<i class="fas fa-clock"></i> ${t(
+              "stationDuration"
+            )}`;
+          } else if (text.includes("Physical Exams")) {
+            label.innerHTML = `<i class="fas fa-stethoscope"></i> ${t(
+              "physicalExams"
+            )}`;
+          } else if (text.includes("Lab Orders")) {
+            label.innerHTML = `<i class="fas fa-flask"></i> ${t("labOrders")}`;
+          } else if (text.includes("Patient Questions")) {
+            label.innerHTML = `<i class="fas fa-comments"></i> ${t(
+              "patientQuestions"
+            )}`;
+          } else if (text.includes("Overall Rating")) {
+            label.innerHTML = `<i class="fas fa-star"></i> ${t(
+              "overallRating"
+            )}`;
+          }
+        });
+
+        // Update rating labels
+        const ratingLabels = document.querySelectorAll(".rating-row label");
+        ratingLabels.forEach((label) => {
+          if (label.textContent.includes("Rate performance")) {
+            label.textContent = t("ratePerformance");
+          }
+        });
+
+        // Update rating hints
+        const ratingHints = document.querySelectorAll(".rating-hints");
+        ratingHints.forEach((hint) => {
+          const parentCard = hint.closest(".metric-card");
+          const label = parentCard.querySelector(".label");
+          if (label && label.textContent.includes(t("stationDuration"))) {
+            hint.textContent = t("durationHint");
+          } else {
+            hint.textContent = t("defaultHint");
+          }
+        });
+
+        // Update send rating button
+        const sendBtn = document.getElementById("send-rating-btn");
+        if (sendBtn) {
+          sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i> ${t(
+            "sendRating"
+          )}`;
+        }
+      }
+
+      function updateEventSections() {
+        const sectionHeads = document.querySelectorAll(".section-head");
+        sectionHeads.forEach((head) => {
+          const text = head.textContent.trim();
+          if (text.includes("Procedure Intervals")) {
+            head.innerHTML =
+              '<span class="badge start"></span> ' + t("procedureIntervals");
+          } else if (text.includes("Patient Questions")) {
+            head.innerHTML =
+              '<span class="badge anamnesis"></span> ' +
+              t("patientQuestionsSection");
+          } else if (text.includes("Alerts & Events")) {
+            head.innerHTML =
+              '<span class="badge alert"></span> ' + t("alertsEvents");
+          } else if (text.includes("Other Procedures")) {
+            head.innerHTML =
+              '<span class="badge start"></span> ' + t("otherProcedures");
+          }
+        });
+
+        // Update event labels
+        const eventLabels = document.querySelectorAll(".event-row .label");
+        eventLabels.forEach((label) => {
+          if (label.textContent === "Put Gloves") {
+            label.textContent = t("putGloves");
+          }
+        });
+      }
+
+      function updateModal() {
+        const modalHeader = document.querySelector(".modal-header h2");
+        if (modalHeader) {
+          modalHeader.innerHTML = `<i class="fas fa-check-circle"></i> ${t(
+            "evaluationComplete"
+          )}`;
+        }
+
+        const thankYouMsg = document.querySelector(".thank-you-message");
+        if (thankYouMsg) {
+          thankYouMsg.textContent = t("thankYouMessage");
+        }
+
+        const closeBtn = document.getElementById("modalCloseBtn");
+        if (closeBtn) {
+          closeBtn.innerHTML = `<i class="fas fa-times"></i> ${t("close")}`;
+        }
+      }
+
+      function updateSummary() {
+        const summaryEl = document.getElementById("summary");
+        if (
+          summaryEl &&
+          summaryEl.textContent &&
+          !summaryEl.textContent.includes("No events found")
+        ) {
+          const match = summaryEl.textContent.match(
+            /Events: (\d+) • Start time: ([\d.]+)s • End time: ([\d.]+)s • Duration: ([\d.]+)s/
+          );
+          if (match) {
+            summaryEl.textContent = t("eventsSummary", {
+              count: match[1],
+              start: match[2],
+              end: match[3],
+              duration: match[4],
+            });
+          }
+        } else if (
+          summaryEl &&
+          summaryEl.textContent.includes("No events found")
+        ) {
+          summaryEl.textContent = t("noEventsFound");
+        }
+      }
+
+      // Language selector functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const languageSelect = document.getElementById("language-select");
+        if (languageSelect) {
+          languageSelect.value = currentLanguage;
+          languageSelect.addEventListener("change", function () {
+            currentLanguage = this.value;
+            localStorage.setItem("language", currentLanguage);
+            updateLanguage();
+          });
+        }
+
+        // Initial language update
+        updateLanguage();
+      });
+
       (function () {
         const input = document.getElementById("inputText");
         const parseBtn = document.getElementById("parseBtn");
@@ -1129,9 +1605,9 @@ observation: 119.0633, station_end</textarea
         if (toggleIntervalsBtn) {
           // initialize text state
           const updateBtn = (on) => {
-            toggleIntervalsBtn.textContent = on
-              ? "Hide Details"
-              : "Show Details";
+            toggleIntervalsBtn.innerHTML = `<i class="fas fa-eye"></i> ${
+              on ? t("hideDetails") : t("showDetails")
+            }`;
             toggleIntervalsBtn.setAttribute(
               "aria-pressed",
               on ? "true" : "false"
@@ -1261,7 +1737,7 @@ observation: 119.0633, station_end</textarea
         function render(parsed) {
           if (!parsed || parsed.events.length === 0) {
             timelineWrap.style.display = "none";
-            summary.textContent = "No events found.";
+            summary.textContent = t("noEventsFound");
             return;
           }
           timelineWrap.style.display = "block";
@@ -1358,7 +1834,9 @@ observation: 119.0633, station_end</textarea
           // Create metrics HTML
           const metricsHtml = `
                   <div class="metric-card">
-                    <div class="label"><i class="fas fa-clock"></i> Station Duration</div>
+                    <div class="label"><i class="fas fa-clock"></i> ${t(
+                      "stationDuration"
+                    )}</div>
                       <div class="value">${escapeHtml(
                         parsed.duration >= 60
                           ? Math.floor(parsed.duration / 60) +
@@ -1381,16 +1859,22 @@ observation: 119.0633, station_end</textarea
               : Math.round(parsed.duration) + "s"
           }</div></div>
                                     </div>
-                    <div class="rating-hints">0-3min: Poor • 3-8min: Acceptable • 8min+: Poor</div>
+                    <div class="rating-hints">${t("durationHint")}</div>
                     <div class="rating-row">
-                      <label for="rating-duration">Rate performance:</label>
-                      <select id="rating-duration" aria-label="Rate duration performance">
+                      <label for="rating-duration">${t(
+                        "ratePerformance"
+                      )}</label>
+                      <select id="rating-duration" aria-label="${t(
+                        "ratePerformance"
+                      )}">
                         <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
                       </select>
                     </div>
                   </div>
                   <div class="metric-card">
-                    <div class="label"><i class="fas fa-stethoscope"></i> Physical Exams</div>
+                    <div class="label"><i class="fas fa-stethoscope"></i> ${t(
+                      "physicalExams"
+                    )}</div>
                     <div class="value">${physicalCount}</div>
                     <div class="rating-scale" data-value="${clampVal(
                       physicalCount
@@ -1400,16 +1884,20 @@ observation: 119.0633, station_end</textarea
                         physicalCount
                       )}</div></div>
                     </div>
-                    <div class="rating-hints">0-2: Poor • 3-4: Acceptable • 5+: Good</div>
+                    <div class="rating-hints">${t("defaultHint")}</div>
                     <div class="rating-row">
-                      <label for="rating-phys">Rate performance:</label>
-                      <select id="rating-phys" aria-label="Rate physical exam performance">
+                      <label for="rating-phys">${t("ratePerformance")}</label>
+                      <select id="rating-phys" aria-label="${t(
+                        "ratePerformance"
+                      )}">
                         <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
                       </select>
                     </div>
                   </div>
                   <div class="metric-card">
-                    <div class="label"><i class="fas fa-flask"></i> Lab Orders</div>
+                    <div class="label"><i class="fas fa-flask"></i> ${t(
+                      "labOrders"
+                    )}</div>
                     <div class="value">${labCount}</div>
                     <div class="rating-scale" data-value="${clampVal(
                       labCount
@@ -1419,16 +1907,20 @@ observation: 119.0633, station_end</textarea
                         labCount
                       )}</div></div>
                     </div>
-                    <div class="rating-hints">0-2: Poor • 3-4: Acceptable • 5+: Good</div>
+                    <div class="rating-hints">${t("defaultHint")}</div>
                     <div class="rating-row">
-                      <label for="rating-lab">Rate performance:</label>
-                      <select id="rating-lab" aria-label="Rate lab ordering performance">
+                      <label for="rating-lab">${t("ratePerformance")}</label>
+                      <select id="rating-lab" aria-label="${t(
+                        "ratePerformance"
+                      )}">
                         <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
                       </select>
                     </div>
                   </div>
                   <div class="metric-card">
-                    <div class="label"><i class="fas fa-comments"></i> Patient Questions</div>
+                    <div class="label"><i class="fas fa-comments"></i> ${t(
+                      "patientQuestions"
+                    )}</div>
                     <div class="value">${questionCount}</div>
                     <div class="rating-scale" data-value="${clampVal(
                       questionCount
@@ -1438,19 +1930,23 @@ observation: 119.0633, station_end</textarea
                         questionCount
                       )}</div></div>
                     </div>
-                    <div class="rating-hints">0-2: Poor • 3-4: Acceptable • 5+: Good</div>
+                    <div class="rating-hints">${t("defaultHint")}</div>
                     <div class="rating-row">
-                      <label for="rating-qs">Rate performance:</label>
-                      <select id="rating-qs" aria-label="Rate questioning performance">
+                      <label for="rating-qs">${t("ratePerformance")}</label>
+                      <select id="rating-qs" aria-label="${t(
+                        "ratePerformance"
+                      )}">
                         <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
                       </select>
                     </div>
                   </div>
                   <div class="metric-card" id="overall-rating">
-                    <div class="label"><i class="fas fa-star"></i> Overall Rating</div>
-                    <div class="value" id="avg-overall">—</div>
-                    <button id="send-rating-btn" class="btn-primary" style="margin-top: 1rem; width: 100%;">
-                      <i class="fas fa-paper-plane"></i> Send Rating and End Evaluation
+                    <div class="label"><i class="fas fa-star"></i> ${t(
+                      "overallRating"
+                    )}</div>
+                    <div class="value" id="avg-overall" style="font-family: 'Inter', monospace; font-size: 1.75rem; font-weight: 700;">—</div>
+                    <button id="send-rating-btn" class="btn-primary" style="margin-top: 1rem; width: 100%; justify-content: center;">
+                      <i class="fas fa-paper-plane"></i> ${t("sendRating")}
                     </button>
                   </div>
                 `;
@@ -1466,9 +1962,9 @@ observation: 119.0633, station_end</textarea
               return v;
             }
             function setMarker(scaleEl, val) {
-              val = clamp(Math.round(val));
-              scaleEl.dataset.value = val;
-              const pct = (val / 5) * 100;
+              const clamped = clamp(Math.round(val));
+              scaleEl.dataset.value = clamped;
+              const pct = Math.min(100, (clamped / 5) * 100);
               const marker = scaleEl.querySelector(".scale-marker");
               if (marker) {
                 marker.style.left = pct + "%";
@@ -1478,7 +1974,7 @@ observation: 119.0633, station_end</textarea
                   marker.style.transform = "translate(-100%, -50%)";
                 else marker.style.transform = "translate(-50%, -50%)";
                 const lbl = marker.querySelector(".label");
-                if (lbl) lbl.textContent = val;
+                if (lbl) lbl.textContent = val > 5 ? "5+" : clamped;
               }
             }
 
@@ -1509,19 +2005,24 @@ observation: 119.0633, station_end</textarea
               if (countMarker) {
                 countMarker.style.left = pctDur + "%";
                 const lbl = countMarker.querySelector(".label");
-                if (lbl)
-                  lbl.textContent =
-                    parsed.duration >= 60
-                      ? Math.floor(parsed.duration / 60) +
-                        "m" +
-                        Math.round(parsed.duration % 60) +
-                        "s"
-                      : Math.round(parsed.duration) + "s";
+                if (lbl) {
+                  if (parsed.duration >= 600) {
+                    lbl.textContent = "10min+";
+                  } else {
+                    lbl.textContent =
+                      parsed.duration >= 60
+                        ? Math.floor(parsed.duration / 60) +
+                          "m" +
+                          Math.round(parsed.duration % 60) +
+                          "s"
+                        : Math.round(parsed.duration) + "s";
+                  }
+                }
               }
             }
-            if (sPhys) setMarker(sPhys, phys);
-            if (sLab) setMarker(sLab, lab);
-            if (sQs) setMarker(sQs, qs);
+            if (sPhys) setMarker(sPhys, physicalCount);
+            if (sLab) setMarker(sLab, labCount);
+            if (sQs) setMarker(sQs, questionCount);
 
             // update when selects change (reliable wiring)
             if (selDur)
@@ -1558,10 +2059,10 @@ observation: 119.0633, station_end</textarea
             // per-base styling: station -> thin black, steto -> thick yellow, default -> hashed color
             const baseLower = it.base.toLowerCase();
             const instrumentNames = {
-              steto: "Stethoscope Exam",
-              otoscope: "Otoscope Exam",
-              stick: "Throat Exam",
-              station: "Station Session",
+              steto: t("stethoscopeExam"),
+              otoscope: t("otoscopeExam"),
+              stick: t("throatExam"),
+              station: t("stationSession"),
             };
 
             // Create tooltip for ALL intervals
@@ -1612,6 +2113,7 @@ observation: 119.0633, station_end</textarea
               div.style.height = "8px"; // thinner
               div.style.opacity = "0.25";
               div.style.top = "21px";
+              div.style.pointerEvents = "none";
               div.setAttribute("data-station", "true");
             } else if (
               baseLower === "steto" ||
@@ -1698,15 +2200,21 @@ observation: 119.0633, station_end</textarea
           const procedureSection = document.createElement("div");
           procedureSection.className = "section";
           procedureSection.innerHTML =
-            '<div class="section-head"><span class="badge start"></span> Procedure Intervals</div>';
+            '<div class="section-head"><span class="badge start"></span> ' +
+            t("procedureIntervals") +
+            "</div>";
           const anamSection = document.createElement("div");
           anamSection.className = "section";
           anamSection.innerHTML =
-            '<div class="section-head"><span class="badge anamnesis"></span> Patient Questions</div>';
+            '<div class="section-head"><span class="badge anamnesis"></span> ' +
+            t("patientQuestionsSection") +
+            "</div>";
           const alertSection = document.createElement("div");
           alertSection.className = "section";
           alertSection.innerHTML =
-            '<div class="section-head"><span class="badge alert"></span> Alerts & Events</div>';
+            '<div class="section-head"><span class="badge alert"></span> ' +
+            t("alertsEvents") +
+            "</div>";
 
           const procedureList = document.createElement("div");
           const anamList = document.createElement("div");
@@ -1722,9 +2230,9 @@ observation: 119.0633, station_end</textarea
             const baseLower = it.base.toLowerCase();
 
             const instrumentNames = {
-              steto: "Stethoscope Exam",
-              otoscope: "Otoscope Exam",
-              stick: "Throat Exam",
+              steto: t("stethoscopeExam"),
+              otoscope: t("otoscopeExam"),
+              stick: t("throatExam"),
             };
 
             const label =
@@ -1759,7 +2267,9 @@ observation: 119.0633, station_end</textarea
           const otherProceduresSection = document.createElement("div");
           otherProceduresSection.className = "section";
           otherProceduresSection.innerHTML =
-            '<div class="section-head"><span class="badge start"></span> Other Procedures</div>';
+            '<div class="section-head"><span class="badge start"></span> ' +
+            t("otherProcedures") +
+            "</div>";
           const otherProceduresList = document.createElement("div");
 
           parsed.events.forEach((ev) => {
@@ -1780,7 +2290,7 @@ observation: 119.0633, station_end</textarea
             labelCol.className = "label";
             let displayLabel = ev.label;
             if (displayLabel === "glovesScript_start") {
-              displayLabel = "Put Gloves";
+              displayLabel = t("putGloves");
             }
             labelCol.textContent = displayLabel;
 
@@ -1839,7 +2349,7 @@ observation: 119.0633, station_end</textarea
             // compute display label (allows replacing glovesScript_* with "Put Gloves")
             let markerDisplayLabel = ev.label;
             if (markerDisplayLabel === "glovesScript_start") {
-              markerDisplayLabel = "Put Gloves";
+              markerDisplayLabel = t("putGloves");
               marker.classList.add("type-hygiene");
             }
 
@@ -1873,7 +2383,7 @@ observation: 119.0633, station_end</textarea
             )}</div>`;
 
             // Add timing information for context
-            const timingInfo = `${ev.normalized.toFixed(1)}s elapsed`;
+            const timingInfo = `${ev.normalized.toFixed(1)}s ${t("elapsed")}`;
             tooltipHtml += `<div class="timing-info">${escapeHtml(
               timingInfo
             )}</div>`;
@@ -1933,13 +2443,12 @@ observation: 119.0633, station_end</textarea
           eventsList.appendChild(anamSection);
           eventsList.appendChild(alertSection);
 
-          summary.textContent = `Events: ${
-            parsed.events.length
-          } • Start time: ${parsed.minT.toFixed(
-            3
-          )}s • End time: ${parsed.maxT.toFixed(
-            3
-          )}s • Duration: ${parsed.duration.toFixed(3)}s`;
+          summary.textContent = t("eventsSummary", {
+            count: parsed.events.length,
+            start: parsed.minT.toFixed(3),
+            end: parsed.maxT.toFixed(3),
+            duration: parsed.duration.toFixed(3),
+          });
         }
 
         parseBtn.addEventListener("click", () => {
@@ -1964,7 +2473,7 @@ observation: 119.0633, station_end</textarea
         exportJson.addEventListener("click", () => {
           const parsed = window.__lastParsed;
           if (!parsed) {
-            alert("Nothing to export. Please analyze data first.");
+            alert(t("noEventsFound"));
             return;
           }
           const blob = new Blob([JSON.stringify(parsed, null, 2)], {
@@ -1981,7 +2490,7 @@ observation: 119.0633, station_end</textarea
         exportCsv.addEventListener("click", () => {
           const parsed = window.__lastParsed;
           if (!parsed) {
-            alert("Nothing to export. Please analyze data first.");
+            alert(t("noEventsFound"));
             return;
           }
           const rows = [["label", "original_time", "normalized_time", "type"]];
@@ -2006,98 +2515,117 @@ observation: 119.0633, station_end</textarea
         parseBtn.click();
 
         // Send rating button functionality
-        const sendRatingBtn = document.getElementById("send-rating-btn");
+        const stationInfoDiv = document.getElementById("stationInfo");
         const evaluationModal = document.getElementById("evaluationModal");
         const evaluationSummary = document.getElementById("evaluationSummary");
         const modalCloseBtn = document.getElementById("modalCloseBtn");
 
-        if (sendRatingBtn) {
-          sendRatingBtn.addEventListener("click", () => {
-            const overallRating =
-              document.getElementById("avg-overall").textContent;
-            const ratings = {
-              duration:
-                document.getElementById("rating-duration")?.value || "0",
-              physical: document.getElementById("rating-phys")?.value || "0",
-              lab: document.getElementById("rating-lab")?.value || "0",
-              questions: document.getElementById("rating-qs")?.value || "0",
-              overall: overallRating,
-            };
+        if (stationInfoDiv) {
+          stationInfoDiv.addEventListener("click", (e) => {
+            if (e.target.id === "send-rating-btn") {
+              console.log("Send rating clicked");
+              const overallRating =
+                document.getElementById("avg-overall").textContent;
+              const ratings = {
+                duration:
+                  document.getElementById("rating-duration")?.value || "0",
+                physical: document.getElementById("rating-phys")?.value || "0",
+                lab: document.getElementById("rating-lab")?.value || "0",
+                questions: document.getElementById("rating-qs")?.value || "0",
+                overall: overallRating,
+              };
 
-            // Clear previous content
-            evaluationSummary.innerHTML = "";
+              console.log("Ratings:", ratings);
+              // Clear previous content
+              evaluationSummary.innerHTML = "";
 
-            // Create overall rating highlight
-            const overallRatingValue = parseFloat(ratings.overall);
-            const overallHighlight = document.createElement("div");
-            overallHighlight.className = "overall-rating-highlight";
+              // Create overall rating highlight
+              const overallRatingValue = parseFloat(ratings.overall);
+              console.log("Overall rating value:", overallRatingValue);
+              const overallHighlight = document.createElement("div");
+              overallHighlight.className = "overall-rating-highlight";
 
-            // Determine the rating class but don't add it yet
-            let ratingClass = "";
-            if (overallRatingValue >= 0 && overallRatingValue < 3) {
-              ratingClass = "rating-red";
-            } else if (overallRatingValue >= 3 && overallRatingValue < 4) {
-              ratingClass = "rating-yellow";
-            } else if (overallRatingValue >= 4) {
-              ratingClass = "rating-green";
-            }
-
-            overallHighlight.innerHTML = `<span style="z-index: 9999; position: relative;"><i class="fas fa-star"></i> Overall Rating: ${ratings.overall}/5</span>`;
-            evaluationSummary.appendChild(overallHighlight);
-
-            // Show modal first
-            evaluationModal.style.display = "block";
-
-            // Then trigger the rating color animation after a brief delay to ensure rendering
-            if (ratingClass) {
-              setTimeout(() => {
-                overallHighlight.classList.add(ratingClass);
-              }, 50);
-            } // Create rating items
-            const ratingItems = [
-              {
-                label: "Duration",
-                value: ratings.duration,
-                icon: "fas fa-clock",
-              },
-              {
-                label: "Physical Exams",
-                value: ratings.physical,
-                icon: "fas fa-stethoscope",
-              },
-              { label: "Lab Orders", value: ratings.lab, icon: "fas fa-flask" },
-              {
-                label: "Patient Questions",
-                value: ratings.questions,
-                icon: "fas fa-comments",
-              },
-            ];
-
-            ratingItems.forEach((item) => {
-              const ratingValue = parseInt(item.value);
+              // Determine the rating class but don't add it yet
               let ratingClass = "";
-              if (ratingValue >= 0 && ratingValue <= 2) {
+              if (overallRatingValue >= 0 && overallRatingValue < 3) {
                 ratingClass = "rating-red";
-              } else if (ratingValue === 3) {
+              } else if (overallRatingValue >= 3 && overallRatingValue <= 4) {
                 ratingClass = "rating-yellow";
-              } else if (ratingValue >= 4) {
+              } else if (overallRatingValue > 4) {
                 ratingClass = "rating-green";
               }
 
-              const ratingItem = document.createElement("div");
-              ratingItem.className = "rating-item";
-              ratingItem.innerHTML = `
-                <div class="rating-label">
-                  <i class="${item.icon}"></i>
-                  ${item.label}
-                </div>
-                <div class="rating-value ${ratingClass}">${item.value}/5</div>
-              `;
-              evaluationSummary.appendChild(ratingItem);
-            });
+              overallHighlight.innerHTML = `<span style="z-index: 9999; position: relative;"><i class="fas fa-star"></i> ${t(
+                "overallRatingLabel"
+              )} ${ratings.overall}/5</span>`;
+              evaluationSummary.appendChild(overallHighlight);
 
-            // Show modal
-            evaluationModal.style.display = "block";
+              // Show modal first
+              if (evaluationModal) {
+                evaluationModal.style.display = "block";
+                console.log("Modal shown");
+              } else {
+                console.log("Modal not found");
+              }
+
+              // Then trigger the rating color animation after a brief delay to ensure rendering
+              if (ratingClass) {
+                setTimeout(() => {
+                  overallHighlight.classList.add(ratingClass);
+                }, 50);
+              } // Create rating items
+              const ratingItems = [
+                {
+                  label: t("stationDuration"),
+                  value: ratings.duration,
+                  icon: "fas fa-clock",
+                },
+                {
+                  label: t("physicalExams"),
+                  value: ratings.physical,
+                  icon: "fas fa-stethoscope",
+                },
+                {
+                  label: t("labOrders"),
+                  value: ratings.lab,
+                  icon: "fas fa-flask",
+                },
+                {
+                  label: t("patientQuestions"),
+                  value: ratings.questions,
+                  icon: "fas fa-comments",
+                },
+              ];
+
+              ratingItems.forEach((item) => {
+                console.log("Item value:", item.value);
+                const ratingValue = parseInt(item.value);
+                let ratingClass = "";
+                if (ratingValue >= 0 && ratingValue <= 2) {
+                  ratingClass = "rating-red";
+                } else if (ratingValue === 3) {
+                  ratingClass = "rating-yellow";
+                } else if (ratingValue >= 4) {
+                  ratingClass = "rating-green";
+                }
+
+                const ratingItem = document.createElement("div");
+                ratingItem.className = "rating-item";
+                ratingItem.innerHTML = `
+                  <div class="rating-label">
+                    <i class="${item.icon}"></i>
+                    ${item.label}
+                  </div>
+                  <div class="rating-value ${ratingClass}">${item.value}/5</div>
+                `;
+                evaluationSummary.appendChild(ratingItem);
+              });
+
+              // Show modal
+              if (evaluationModal) {
+                evaluationModal.style.display = "block";
+              }
+            }
           });
         }
 
