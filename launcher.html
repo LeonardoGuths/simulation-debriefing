@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Launcher — Simulation Debriefing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root{--primary:#2563eb;--muted:#64748b;--bg:#f8fafc;--card:#ffffff;--accent:#06b6d4}
+      html,body{height:100%;}
+      body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f1f5ff,#f8fafc);color:#0f172a}
+      .wrap{max-width:1100px;margin:36px auto;padding:24px}
+      .header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+      .header h1{margin:0;font-size:20px;color:var(--primary)}
+      .grid{display:grid;grid-template-columns:300px 1fr;gap:18px}
+      .panel{background:var(--card);border:1px solid #e6eefc;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+      .students-list{display:flex;flex-direction:column;gap:10px}
+      .student{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;border:1px solid #eef2ff}
+      .student .meta{flex:1}
+      .student .name{font-weight:700;color:#0f172a}
+      .student .id{font-size:12px;color:var(--muted)}
+      .student .actions{display:flex;gap:8px}
+      .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+      .btn.primary{background:var(--primary);color:#fff}
+      .btn.ghost{background:transparent;border:1px solid #dbeafe;color:var(--primary)}
+      .preview{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#fbfdff;border-radius:8px;padding:12px;border:1px solid #eef2ff;max-height:420px;overflow:auto}
+      .search{margin-bottom:12px}
+      .search input{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefc}
+      .note{font-size:13px;color:var(--muted);margin-top:10px}
+      @media (max-width:880px){.grid{grid-template-columns:1fr}}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1><i class="fas fa-stethoscope"></i> Simulation Launcher</h1>
+        <div style="flex:1"></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong>Students</strong>
+            <small style="color:var(--muted)">Click to open and send log</small>
+          </div>
+          <div class="search"><input id="filter" placeholder="Filter students..." /></div>
+          <div id="students" class="students-list"></div>
+        </div>
+
+        <div class="panel">
+          <strong>Selected simulation preview</strong>
+          <div id="preview" class="preview">Select a student to preview their simulation log here.</div>
+          <div class="note">When you click "Open & Send" the launcher will open <code>index.html</code> in a new tab and send the simulation text to populate the input area automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+      // Embedded fallback students (used if logs/ JSON files cannot be loaded)
+      const embeddedFallback = [
+        {
+          id: 'station-001',
+          name: 'Alice Martins',
+          log: `observation: 86.44625, station_start
+observation: 95.69093, steto_start
+observation: 95.69093, Using stethoscope before hygiene
+observation: 95.69093, Using stethoscope before anamnesis
+observation: 96.15615, steto_end
+observation: 98.56265, glovesScript_start
+observation: 99.56265, glovesScript_end
+observation: 102.5382, steto_start
+observation: 102.5382, Using stethoscope before anamnesis
+observation: 103.0106, steto_end
+observation: 110.633, anamnesis: Faz algum exercício físico?
+observation: 114.3999, steto_start
+observation: 115.6103, steto_end
+observation: 119.0633, correctDiagnosis_start
+observation: 119.0633, correctDiagnosis_end
+observation: 119.0633, correctTreatment_start
+observation: 119.0633, correctTreatment_end
+observation: 119.0633, station_end`
+        },
+        {
+          id: 'station-002',
+          name: 'Bruno Silva',
+          log: `observation: 42.125, station_start
+observation: 50.8809, steto_start
+observation: 50.8809, Using stethoscope before hygiene
+observation: 50.9809, Using stethoscope before anamnesis
+observation: 51.4561, steto_end
+observation: 53.9126, glovesScript_start
+observation: 54.9126, glovesScript_end
+observation: 60.2382, otoscope_start
+observation: 60.2382, Using otoscope before anamnesis
+observation: 61.0106, otoscope_end
+observation: 68.633, anamnesis: Tem alergias alimentares?
+observation: 72.3999, steto_start
+observation: 73.6103, steto_end
+observation: 79.0633, correctDiagnosis_start
+observation: 79.0633, correctDiagnosis_end
+observation: 79.0633, correctTreatment_start
+observation: 79.0633, correctTreatment_end
+observation: 79.0633, station_end`
+        },
+        {
+          id: 'station-003',
+          name: 'Carla Souza',
+          log: `observation: 10.446, station_start
+observation: 18.690, steto_start
+observation: 18.690, Using stethoscope before hygiene
+observation: 18.690, Using stethoscope before anamnesis
+observation: 19.156, steto_end
+observation: 21.562, glovesScript_start
+observation: 22.562, glovesScript_end
+observation: 25.538, steto_start
+observation: 25.538, Using stethoscope before anamnesis
+observation: 26.011, steto_end
+observation: 32.633, anamnesis: Você fuma?
+observation: 36.399, steto_start
+observation: 37.610, steto_end
+observation: 39.063, correctDiagnosis_start
+observation: 39.063, correctDiagnosis_end
+observation: 39.063, correctTreatment_start
+observation: 39.063, correctTreatment_end
+observation: 39.063, station_end`
+        }
+      ];
+
+      // Attempt to load JSON logs from the logs/ folder (student-A.json .. student-Z.json)
+      // If running via file:// the fetch may be blocked; in that case we fall back to embeddedFallback.
+      async function loadLogsFromFolder() {
+        const basePath = 'logs/';
+        const letters = Array.from({length:26}, (_,i) => String.fromCharCode(65+i));
+        const promises = letters.map(letter => {
+          const fname = `${basePath}student-${letter}.json`;
+          return fetch(fname).then(r => {
+            if (!r.ok) throw new Error('not found');
+            return r.json();
+          }).then(j => ({ok:true, json:j})).catch(e => ({ok:false, err:e}));
+        });
+
+        const results = await Promise.all(promises);
+        const good = results.filter(r => r.ok).map(r => ({ id: r.json.id || r.json.name || 'unknown', name: r.json.name || r.json.id || 'Student', log: r.json.log || '' }));
+        if (good.length > 0) return good;
+        return embeddedFallback;
+      }
+
+      // We'll populate `students` asynchronously and then render the list
+      let students = [];
+      (async () => {
+        try {
+          students = await loadLogsFromFolder();
+        } catch (e) {
+          students = embeddedFallback;
+        }
+        renderList();
+      })();
+
+      const studentsEl = document.getElementById('students');
+      const previewEl = document.getElementById('preview');
+      const filterEl = document.getElementById('filter');
+
+      function renderList(filter) {
+        studentsEl.innerHTML = '';
+        const list = students.filter(s => !filter || s.name.toLowerCase().includes(filter.toLowerCase()) || s.id.toLowerCase().includes(filter.toLowerCase()));
+        list.forEach(s => {
+          const el = document.createElement('div');
+          el.className = 'student';
+          el.innerHTML = `
+            <div class="meta">
+              <div class="name">${s.name}</div>
+              <div class="id">${s.id}</div>
+            </div>
+            <div class="actions">
+              <button class="btn ghost" data-id="${s.id}" data-action="preview">Preview</button>
+              <button class="btn primary" data-id="${s.id}" data-action="send">Open &amp; Send</button>
+            </div>
+          `;
+          studentsEl.appendChild(el);
+        });
+      }
+
+      renderList();
+
+      filterEl.addEventListener('input', (e) => renderList(e.target.value));
+
+      studentsEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        const s = students.find(x => x.id === id);
+        if (!s) return;
+        if (action === 'preview') {
+          previewEl.textContent = s.log;
+          return;
+        }
+        if (action === 'send') {
+          // open index.html in a new tab and postMessage the log when ready
+          const child = window.open('index.html', '_blank');
+          if (!child) {
+            alert('Popup blocked. Please allow popups for this site or open index.html manually.');
+            return;
+          }
+
+          let acknowledged = false;
+          const messageId = Math.random().toString(36).slice(2,9);
+
+          function sendOnce() {
+            try {
+              child.postMessage({ type: 'loadSimulationData', payload: s.log, id: messageId }, '*');
+            } catch (e) {
+              // ignore
+            }
+          }
+
+          // Send repeatedly until we receive an ack (child will send index-ready first)
+          const interval = setInterval(() => {
+            if (acknowledged) { clearInterval(interval); return; }
+            sendOnce();
+          }, 300);
+
+          // Listen for messages from the child (index)
+          function onMessage(ev) {
+            if (!ev || !ev.data) return;
+            const m = ev.data;
+            if (m && m.type === 'index-ready') {
+              // child is telling us it is ready - send the payload immediately
+              sendOnce();
+              return;
+            }
+            if (m && m.type === 'loaded-ack' && (m.id === messageId || m.id == null)) {
+              acknowledged = true;
+              clearInterval(interval);
+              window.removeEventListener('message', onMessage);
+              alert('Simulation data sent to index.html successfully.');
+            }
+          }
+
+          window.addEventListener('message', onMessage);
+          // Also attempt an initial send in case index is already listening
+          setTimeout(sendOnce, 250);
+        }
+      });
+    </script>
+  </body>
+</html>
