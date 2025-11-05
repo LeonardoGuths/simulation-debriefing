@@ -431,6 +431,98 @@
         transform: translateY(-2px);
       }
 
+      /* Icon-only toggle styling for compact arrow button */
+      .btn-toggle.icon-only {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+
+      .btn-toggle.icon-only i {
+        transition: transform 560ms cubic-bezier(.2,.9,.2,1);
+        font-size: 0.9rem;
+      }
+
+      /* Events list collapse/expand animation */
+      .events-grid {
+        overflow: hidden;
+        max-height: 2000px; /* large enough for content */
+        transition: max-height 560ms cubic-bezier(.2,.9,.2,1),
+                    opacity 560ms ease, transform 560ms ease;
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .events-section.collapsed .events-grid {
+        max-height: 0px;
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+
+      /* Rotate chevron when expanded (chevron points up when open) */
+      .events-section:not(.collapsed) #toggleEventsBtn i {
+        transform: rotate(180deg);
+      }
+
+      .events-section.collapsed #toggleEventsBtn i {
+        transform: rotate(0deg);
+      }
+
+      /* Floating overall rating (right side) */
+      .floating-overall {
+        position: fixed;
+        right: 1.25rem;
+        top: 15%;
+        width: 220px;
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        z-index: 1500;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+        opacity: 0;
+        transform: translateY(-6px) scale(0.995);
+        transition: opacity 600ms ease, transform 600ms cubic-bezier(.2,.9,.2,1);
+        pointer-events: none;
+      }
+
+      .floating-overall.visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .floating-overall .label {
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+      }
+
+      .floating-overall .value {
+        font-family: 'Inter', monospace;
+        font-weight: 800;
+        font-size: 1.4rem;
+        color: var(--primary-color);
+        text-align: center;
+      }
+
+      .floating-overall .floating-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+      }
+
       .btn-toggle {
         padding: 0.75rem 1.5rem;
         background: rgba(255, 255, 255, 0.1);
@@ -1154,10 +1246,7 @@ observation: 119.0633, station_end</textarea
 
         <main class="content">
           <div id="output" class="analysis-container" style="display: none">
-            <section class="dashboard">
-              <h2><i class="fas fa-chart-bar"></i> Performance Metrics</h2>
-              <div id="stationInfo" class="metrics-grid"></div>
-            </section>
+            
 
             <section class="timeline-section">
               <h2><i class="fas fa-timeline"></i> Procedure Timeline</h2>
@@ -1170,11 +1259,32 @@ observation: 119.0633, station_end</textarea
             </section>
 
             <section class="events-section">
-              <h2><i class="fas fa-list-check"></i> Event Log</h2>
+              <h2>
+                <i class="fas fa-list-check"></i>
+                <span class="events-title-text">Event Log</span>
+                <div class="events-controls" style="display: inline-block; margin-left: 0.75rem;">
+                  <button id="toggleEventsBtn" class="btn-toggle icon-only" aria-pressed="false" aria-label="Show Details" title="Show Details">
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                </div>
+              </h2>
               <div id="eventsList" class="events-grid"></div>
+            </section>
+            <section class="dashboard" style="margin-top: 2rem;">
+              <h2><i class="fas fa-chart-bar"></i> Performance Metrics</h2>
+              <div id="stationInfo" class="metrics-grid"></div>
             </section>
           </div>
         </main>
+      </div>
+    </div>
+
+    <!-- Floating overall rating (created once and updated dynamically) -->
+    <div id="floatingOverall" class="floating-overall" aria-hidden="true" style="display:none">
+      <div class="label"><i class="fas fa-star"></i> <span id="floating-overall-label">Overall Rating</span></div>
+      <div id="floating-avg" class="value">—</div>
+      <div class="floating-actions">
+        <button id="floating-send-btn" class="btn-primary" style="padding:0.5rem 0.75rem; font-size:0.85rem;">Send</button>
       </div>
     </div>
 
@@ -1238,7 +1348,7 @@ observation: 119.0633, station_end</textarea
           stationDuration: "Station Duration",
           physicalExams: "Physical Exams",
           labOrders: "Lab Orders",
-          patientQuestions: "Patient Questions",
+          patientQuestions: "Anamnesis",
           overallRating: "Overall Rating",
           ratePerformance: "Rate performance:",
 
@@ -1248,7 +1358,7 @@ observation: 119.0633, station_end</textarea
 
           // Event sections
           procedureIntervals: "Procedure Intervals",
-          patientQuestionsSection: "Patient Questions",
+          patientQuestionsSection: "Anamnesis",
           alertsEvents: "Alerts & Events",
           otherProcedures: "Other Procedures",
 
@@ -1302,7 +1412,7 @@ observation: 119.0633, station_end</textarea
           stationDuration: "Duração da Estação",
           physicalExams: "Exames Físicos",
           labOrders: "Pedidos de Laboratório",
-          patientQuestions: "Perguntas ao Paciente",
+          patientQuestions: "Anamnese",
           overallRating: "Avaliação Geral",
           ratePerformance: "Avaliar desempenho:",
 
@@ -1312,7 +1422,7 @@ observation: 119.0633, station_end</textarea
 
           // Event sections
           procedureIntervals: "Intervalos de Procedimentos",
-          patientQuestionsSection: "Perguntas ao Paciente",
+          patientQuestionsSection: "Anamnese",
           alertsEvents: "Alertas e Eventos",
           otherProcedures: "Outros Procedimentos",
 
@@ -1409,6 +1519,16 @@ observation: 119.0633, station_end</textarea
           }`;
         }
 
+        // Update events toggle accessibility text if it exists (do not replace innerHTML)
+        const toggleEventsBtn = document.getElementById("toggleEventsBtn");
+        if (toggleEventsBtn) {
+          const eventsSection = document.querySelector('.events-section');
+          const isVisible = eventsSection && !eventsSection.classList.contains('collapsed');
+          const label = isVisible ? t('hideDetails') : t('showDetails');
+          toggleEventsBtn.setAttribute('aria-label', label);
+          toggleEventsBtn.title = label;
+        }
+
         // Update main content sections if they exist
         const dashboardH2 = document.querySelector(".dashboard h2");
         if (dashboardH2) {
@@ -1426,9 +1546,15 @@ observation: 119.0633, station_end</textarea
 
         const eventsH2 = document.querySelector(".events-section h2");
         if (eventsH2) {
-          eventsH2.innerHTML = `<i class="fas fa-list-check"></i> ${t(
-            "eventLog"
-          )}`;
+          const titleSpan = eventsH2.querySelector('.events-title-text');
+          if (titleSpan) {
+            titleSpan.textContent = t('eventLog');
+          } else {
+            // fallback: replace only the icon+text while preserving controls if present
+            const controls = eventsH2.querySelector('.events-controls');
+            const controlsHtml = controls ? controls.outerHTML : '';
+            eventsH2.innerHTML = `<i class="fas fa-list-check"></i> <span class="events-title-text">${t('eventLog')}</span> ${controlsHtml}`;
+          }
         }
 
         // Update metric cards if they exist
@@ -1442,6 +1568,11 @@ observation: 119.0633, station_end</textarea
 
         // Update summary if it exists
         updateSummary();
+  // Update floating overall label if present
+  const floatingLabel = document.getElementById('floating-overall-label');
+  if (floatingLabel) floatingLabel.textContent = t('overallRating');
+  const floatingSend = document.getElementById('floating-send-btn');
+  if (floatingSend) floatingSend.textContent = t('sendRating');
       }
 
       function updateMetricCards() {
@@ -1588,6 +1719,7 @@ observation: 119.0633, station_end</textarea
         updateLanguage();
       });
 
+
       (function () {
         const input = document.getElementById("inputText");
         const parseBtn = document.getElementById("parseBtn");
@@ -1622,6 +1754,35 @@ observation: 119.0633, station_end</textarea
               "show-interval-tooltips"
             );
             updateBtn(nowOn);
+          });
+        }
+
+        // Event Log collapse/expand toggle
+        const toggleEventsBtn = document.getElementById("toggleEventsBtn");
+        if (toggleEventsBtn) {
+          const eventsSectionEl = document.querySelector('.events-section');
+          const eventsListEl = document.getElementById('eventsList');
+          const updateBtnState = (visible) => {
+            // aria-pressed should indicate the button is toggled when collapsed
+            toggleEventsBtn.setAttribute('aria-pressed', visible ? 'false' : 'true');
+            toggleEventsBtn.classList.toggle('on', visible);
+            toggleEventsBtn.classList.toggle('off', !visible);
+            const label = visible ? t('hideDetails') : t('showDetails');
+            toggleEventsBtn.setAttribute('aria-label', label);
+            toggleEventsBtn.title = label;
+          };
+
+          // default: not visible 
+          eventsSectionEl.classList.add('collapsed');
+          updateBtnState(false);
+
+          toggleEventsBtn.addEventListener('click', () => {
+            const isCurrentlyVisible = !eventsSectionEl.classList.contains('collapsed');
+            const nowVisible = !isCurrentlyVisible;
+            // toggle collapsed marker on section; CSS handles animation
+            eventsSectionEl.classList.toggle('collapsed', !nowVisible);
+            // update button state (aria/title)
+            updateBtnState(nowVisible);
           });
         }
 
@@ -1953,6 +2114,10 @@ observation: 119.0633, station_end</textarea
 
           stationInfo.innerHTML = metricsHtml;
 
+          // synchronize floating overall and (re)attach observer now that overall element exists
+          if (window.__syncFloatingOverall) window.__syncFloatingOverall();
+          if (window.__observeOverall) window.__observeOverall();
+
           // wire selects and compute marker positions
           (function initScales() {
             function clamp(v, a = 0, b = 5) {
@@ -2041,6 +2206,14 @@ observation: 119.0633, station_end</textarea
               const el = document.getElementById("avg-overall");
               if (el)
                 el.textContent = Number.isFinite(avg) ? avg.toFixed(2) : "—";
+              // keep floating overall in sync when average changes
+              if (window && typeof window.__syncFloatingOverall === 'function') {
+                try {
+                  window.__syncFloatingOverall();
+                } catch (e) {
+                  console.log && console.log('syncFloatingOverall error', e && e.message);
+                }
+              }
             }
             // ensure initial value
             computeOverallAverage();
@@ -2519,6 +2692,202 @@ observation: 119.0633, station_end</textarea
         const evaluationModal = document.getElementById("evaluationModal");
         const evaluationSummary = document.getElementById("evaluationSummary");
         const modalCloseBtn = document.getElementById("modalCloseBtn");
+
+        // Floating overall behaviour: show floating box when original overall-rating is out of view
+        (function setupFloatingOverall() {
+          const floating = document.getElementById('floatingOverall');
+          const floatingAvg = document.getElementById('floating-avg');
+          const floatingSend = document.getElementById('floating-send-btn');
+
+          // helper to set floating value from main avg
+          function syncFloatingValue() {
+            const mainAvg = document.getElementById('avg-overall');
+            if (mainAvg && floatingAvg) {
+              floatingAvg.textContent = mainAvg.textContent || '—';
+            }
+            console.log && console.log('syncFloatingValue ->', floatingAvg && floatingAvg.textContent);
+          }
+
+          // state
+          let observer = null;
+          let isFloatingVisible = false;
+          let lastToggle = 0;
+          const TOGGLE_DEBOUNCE = 350; // ms
+
+          // show/hide helpers with animation; they set isFloatingVisible accordingly
+          function showFloating() {
+            if (!floating || isFloatingVisible) return;
+            isFloatingVisible = true;
+            lastToggle = Date.now();
+            const target = document.getElementById('overall-rating');
+            if (target) {
+              // ensure floating is renderable so we can measure final rect
+              floating.style.display = '';
+              floating.style.visibility = 'hidden';
+              floating.classList.remove('visible');
+              floating.style.transition = 'none';
+              const finalRect = floating.getBoundingClientRect();
+              const targetRect = target.getBoundingClientRect();
+              const finalCx = finalRect.left + finalRect.width / 2;
+              const finalCy = finalRect.top + finalRect.height / 2;
+              const targetCx = targetRect.left + targetRect.width / 2;
+              const targetCy = targetRect.top + targetRect.height / 2;
+              const fromX = targetCx - finalCx;
+              const fromY = targetCy - finalCy;
+              floating.style.transform = `translate(${fromX}px, ${fromY}px) scale(0.85)`;
+              floating.style.opacity = '0';
+              floating.style.visibility = 'visible';
+              void floating.offsetWidth;
+              floating.style.transition = 'transform 600ms cubic-bezier(.2,.9,.2,1), opacity 600ms ease';
+              requestAnimationFrame(() => {
+                floating.style.transform = 'translate(0, 0) scale(1)';
+                floating.style.opacity = '1';
+              });
+              const onEnd = () => {
+                floating.classList.add('visible');
+                floating.style.transform = '';
+                floating.style.transition = '';
+                floating.removeEventListener('transitionend', onEnd);
+              };
+              floating.addEventListener('transitionend', onEnd);
+            } else {
+              floating.style.display = '';
+              requestAnimationFrame(() => floating.classList.add('visible'));
+            }
+            floating.setAttribute('aria-hidden', 'false');
+            console.log && console.log('showFloating called');
+          }
+
+          function hideFloating() {
+            if (!floating || !isFloatingVisible) return;
+            isFloatingVisible = false;
+            lastToggle = Date.now();
+            const target = document.getElementById('overall-rating');
+            if (target) {
+              const finalRect = floating.getBoundingClientRect();
+              const targetRect = target.getBoundingClientRect();
+              const finalCx = finalRect.left + finalRect.width / 2;
+              const finalCy = finalRect.top + finalRect.height / 2;
+              const targetCx = targetRect.left + targetRect.width / 2;
+              const targetCy = targetRect.top + targetRect.height / 2;
+              const toX = targetCx - finalCx;
+              const toY = targetCy - finalCy;
+              floating.style.transition = 'transform 600ms cubic-bezier(.2,.9,.2,1), opacity 300ms ease';
+              floating.style.transform = '';
+              floating.style.opacity = '1';
+              void floating.offsetWidth;
+              requestAnimationFrame(() => {
+                floating.style.transform = `translate(${toX}px, ${toY}px) scale(0.85)`;
+                floating.style.opacity = '0';
+              });
+              const onEndHide = () => {
+                floating.style.display = 'none';
+                floating.classList.remove('visible');
+                floating.style.transform = '';
+                floating.style.transition = '';
+                floating.removeEventListener('transitionend', onEndHide);
+              };
+              floating.addEventListener('transitionend', onEndHide);
+            } else {
+              floating.classList.remove('visible');
+              setTimeout(() => {
+                if (!floating.classList.contains('visible')) floating.style.display = 'none';
+              }, 300);
+            }
+            floating.setAttribute('aria-hidden', 'true');
+            console.log && console.log('hideFloating called');
+          }
+
+          // wire floating send button to trigger the main send button (if exists)
+          if (floatingSend) {
+            floatingSend.addEventListener('click', () => {
+              const mainSend = document.getElementById('send-rating-btn');
+              if (mainSend) mainSend.click();
+              else if (typeof window.showEvaluationModal === 'function') window.showEvaluationModal();
+            });
+          }
+
+          // Create observer to watch original overall element
+          function observeOverall() {
+            if (observer) observer.disconnect();
+            const target = document.getElementById('overall-rating');
+            console.log && console.log('observeOverall target=', !!target);
+            if (!target) return;
+            syncFloatingValue();
+            observer = new IntersectionObserver((entries) => {
+              const now = Date.now();
+              if (now - lastToggle < TOGGLE_DEBOUNCE) return; // debounce rapid toggles
+              entries.forEach((entry) => {
+                console.log && console.log('observer entry', entry.isIntersecting, entry.intersectionRatio);
+                const shouldShow = !entry.isIntersecting;
+                if (shouldShow && !isFloatingVisible) {
+                  syncFloatingValue();
+                  showFloating();
+                } else if (!shouldShow && isFloatingVisible) {
+                  hideFloating();
+                }
+              });
+            }, { root: null, threshold: 0.25 });
+            observer.observe(target);
+          }
+
+          // ensure we observe after render produces overall-rating
+          // re-run observeOverall after parse/render
+          window.__observeOverall = observeOverall;
+
+          // expose sync for render
+          window.__syncFloatingOverall = syncFloatingValue;
+        })();
+
+        // If the initial parse already ran before the observer was defined, try attaching now
+        if (window.__observeOverall) {
+          console.log && console.log('initializing observeOverall after definition');
+          window.__observeOverall();
+        }
+        if (window.__syncFloatingOverall) {
+          window.__syncFloatingOverall();
+        }
+
+        // Messaging API: accept simulation log data from a launcher window
+        // and notify opener when index is ready to receive data.
+        try {
+          // Notify opener (launcher) that index is ready to accept data
+          if (window.opener && typeof window.opener.postMessage === 'function') {
+            try {
+              window.opener.postMessage({ type: 'index-ready' }, '*');
+              console.log && console.log('posted index-ready to opener');
+            } catch (e) {
+              console.log && console.log('postMessage to opener failed', e && e.message);
+            }
+          }
+        } catch (e) {
+          /* ignore */
+        }
+
+        // Listen for messages (e.g. from launcher) containing simulation data
+        window.addEventListener('message', (ev) => {
+          if (!ev || !ev.data) return;
+          const msg = ev.data;
+          if (msg && msg.type === 'loadSimulationData' && typeof msg.payload === 'string') {
+            try {
+              const inputEl = document.getElementById('inputText');
+              if (inputEl) {
+                // set the text content (preserve trailing newlines)
+                inputEl.value = msg.payload;
+                // re-run parsing/rendering
+                const parseBtn = document.getElementById('parseBtn');
+                if (parseBtn) {
+                  parseBtn.click();
+                }
+                console.log && console.log('Loaded simulation data from launcher, length=', msg.payload.length);
+              }
+              // reply an ack to the source window so launcher can stop trying
+              try { ev.source.postMessage({ type: 'loaded-ack', id: msg.id || null }, '*'); } catch (e) {}
+            } catch (e) {
+              console.log && console.log('Error handling loadSimulationData', e && e.message);
+            }
+          }
+        }, false);
 
         if (stationInfoDiv) {
           stationInfoDiv.addEventListener("click", (e) => {
